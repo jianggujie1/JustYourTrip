@@ -15,7 +15,8 @@ struct MockData {
             destination: "上海",
             startDate: today,
             endDate: dayAfter,
-            notes: "包含经典陆家嘴天际线、外滩历史建筑群、法租界梧桐区漫步与特色轮渡换乘体验。"
+            notes: "包含经典陆家嘴天际线、外滩历史建筑群、法租界梧桐区漫步与特色轮渡换乘体验。",
+            vibeTags: ["🏙️ 梧桐Citywalk", "📸 地标天际线", "⛴️ 过江轮渡", "☕ 慢调漫游"]
         )
         context.insert(trip)
         

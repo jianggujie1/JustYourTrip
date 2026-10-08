@@ -235,7 +235,8 @@ struct DraftCalibrationView: View {
             title: editableTitle.isEmpty ? tripTitle : editableTitle,
             destination: destination,
             startDate: today,
-            endDate: endDate
+            endDate: endDate,
+            vibeTags: ["✨ AI定制路线", "🗺️ 漫游规划"]
         )
         modelContext.insert(plan)
         

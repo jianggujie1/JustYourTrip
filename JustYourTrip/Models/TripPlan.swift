@@ -11,6 +11,7 @@ final class TripPlan {
     var endDate: Date = Date()
     var coverImageData: Data?
     var notes: String = ""
+    var vibeTags: [String] = []
     var createdAt: Date = Date()
     
     // 关系：每日安排 (一对多，级联删除)
@@ -26,7 +27,8 @@ final class TripPlan {
         destination: String,
         startDate: Date = Date(),
         endDate: Date = Date().addingTimeInterval(86400 * 2),
-        notes: String = ""
+        notes: String = "",
+        vibeTags: [String] = []
     ) {
         self.id = UUID()
         self.title = title
@@ -34,6 +36,7 @@ final class TripPlan {
         self.startDate = startDate
         self.endDate = endDate
         self.notes = notes
+        self.vibeTags = vibeTags
         self.createdAt = Date()
     }
     

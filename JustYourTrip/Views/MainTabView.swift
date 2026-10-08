@@ -27,7 +27,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
         }
-        .tint(AppTheme.indigoPrimary)
+        .tint(AppTheme.forestPrimary)
         .onChange(of: selectedTab) { _, _ in
             HapticFeedback.selection()
         }

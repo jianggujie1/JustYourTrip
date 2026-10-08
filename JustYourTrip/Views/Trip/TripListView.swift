@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// 行程列表首页 (画册杂志风 & 空间质感)
+/// 行程列表首页 (Uix Foysal 概念画册风、多层堆叠卡片与自然森林色系)
 struct TripListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TripPlan.startDate, order: .reverse) private var trips: [TripPlan]
@@ -13,20 +13,20 @@ struct TripListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // 背景暖色画板
+                // 背景暖色画布
                 AppTheme.canvasBackground
                     .ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // 顶部杂志感 Hero 欢迎栏
+                    VStack(alignment: .leading, spacing: 24) {
+                        // 顶部杂志感 Hero 欢迎与探索栏
                         headerHeroSection
                         
                         if trips.isEmpty {
                             emptyStateView
                         } else {
-                            // 行程卡片流
-                            LazyVStack(spacing: 18) {
+                            // 堆叠层级感行程卡片流
+                            LazyVStack(spacing: 28) {
                                 ForEach(trips) { trip in
                                     NavigationLink(destination: TripDetailMapView(trip: trip)) {
                                         TripCardView(trip: trip)
@@ -42,11 +42,12 @@ struct TripListView: View {
                                     }
                                 }
                             }
+                            .padding(.top, 8)
                         }
                     }
                     .padding(.horizontal, 18)
-                    .padding(.top, 8)
-                    .padding(.bottom, 36)
+                    .padding(.top, 6)
+                    .padding(.bottom, 40)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -90,7 +91,7 @@ struct TripListView: View {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 20, weight: .semibold))
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(AppTheme.indigoPrimary)
+                            .foregroundStyle(AppTheme.sageMint)
                     }
                 }
             }
@@ -106,20 +107,24 @@ struct TripListView: View {
         }
     }
     
-    // MARK: - 顶部欢迎 Hero 区域
+    // MARK: - 顶部欢迎 Hero 区域 (参考 Uix Foysal "Where Will You Go Next?")
     
     private var headerHeroSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(Date().formatted(.dateTime.month().day().weekday(.wide)))
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(AppTheme.sageMint)
+                        .frame(width: 7, height: 7)
+                    
+                    Text(Date().formatted(.dateTime.month().day().weekday(.wide)))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
                 
                 Spacer()
                 
-                // 快捷 AI 导入发光按钮
+                // 快捷 AI 导入发光微胶囊
                 Button {
                     HapticFeedback.medium()
                     showAIImportSheet = true
@@ -130,18 +135,19 @@ struct TripListView: View {
                         Text("AI 快速导入")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 6)
                     .background(AppTheme.brandGradient)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
-                    .shadow(color: AppTheme.indigoPrimary.opacity(0.35), radius: 6, x: 0, y: 3)
+                    .shadow(color: AppTheme.forestPrimary.opacity(0.35), radius: 6, x: 0, y: 3)
                 }
             }
             
-            Text("专属旅程 · 即刻启程")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+            Text("Where Will You\nGo Next?")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
+                .lineSpacing(2)
         }
         .padding(.vertical, 4)
     }
@@ -152,18 +158,18 @@ struct TripListView: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(AppTheme.indigoPrimary.opacity(0.08))
+                    .fill(AppTheme.sageMint.opacity(0.1))
                     .frame(width: 140, height: 140)
                 
                 Circle()
-                    .fill(AppTheme.indigoPrimary.opacity(0.12))
+                    .fill(AppTheme.forestPrimary.opacity(0.12))
                     .frame(width: 100, height: 100)
                 
                 Image(systemName: "map.fill")
                     .font(.system(size: 44))
                     .foregroundStyle(AppTheme.brandGradient)
             }
-            .padding(.top, 30)
+            .padding(.top, 28)
             
             VStack(spacing: 8) {
                 Text("记录独属于你的每一次漫游")
@@ -189,7 +195,7 @@ struct TripListView: View {
                         .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(AppTheme.indigoPrimary)
+                .tint(AppTheme.forestPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
                 Button {
@@ -205,7 +211,7 @@ struct TripListView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .padding(.horizontal, 20)
-            .padding(.top, 10)
+            .padding(.top, 8)
         }
         .padding(24)
         .elevatedCard(cornerRadius: 24)
@@ -213,105 +219,140 @@ struct TripListView: View {
     }
 }
 
-// MARK: - 行程封面手账画册卡片
+// MARK: - 行程封面手账画册卡片 (带多重层叠感 & Trip Vibe 情绪胶囊)
 struct TripCardView: View {
     let trip: TripPlan
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // 卡片上部：目的地地名大字与天数 Badge
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 15))
-                            .foregroundStyle(AppTheme.sunsetCoral)
+        ZStack(alignment: .top) {
+            // 背景层叠 2 (最外层/最窄，呈现厚度)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(AppTheme.sageMint.opacity(0.12))
+                .frame(height: 50)
+                .padding(.horizontal, 24)
+                .offset(y: -12)
+            
+            // 背景层叠 1 (中层，稍宽)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(AppTheme.forestPrimary.opacity(0.18))
+                .frame(height: 50)
+                .padding(.horizontal, 12)
+                .offset(y: -6)
+            
+            // 主前景卡片
+            VStack(alignment: .leading, spacing: 14) {
+                // 卡片上部：目的地地名大字与天数 Badge
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundStyle(AppTheme.sunsetCoral)
+                            
+                            Text(trip.destination)
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.sunsetCoral)
+                            
+                            Text("•")
+                                .foregroundStyle(.secondary)
+                            
+                            Text("\(trip.startDate.formatted(.dateTime.month().day())) - \(trip.endDate.formatted(.dateTime.month().day()))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         
-                        Text(trip.destination)
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.sunsetCoral)
-                        
-                        Text("•")
-                            .foregroundStyle(.secondary)
-                        
-                        Text("\(trip.startDate.formatted(.dateTime.month().day())) - \(trip.endDate.formatted(.dateTime.month().day()))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text(trip.title)
+                            .font(.system(size: 21, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
                     }
                     
-                    Text(trip.title)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
+                    Spacer()
+                    
+                    // 天数胶囊
+                    Text("\(trip.days.count) 天行程")
+                        .font(.system(size: 11, weight: .bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(AppTheme.forestPrimary.opacity(0.12))
+                        .foregroundStyle(AppTheme.forestPrimary)
+                        .clipShape(Capsule())
                 }
                 
-                Spacer()
+                // Trip Vibe 情绪标签流
+                if !trip.vibeTags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(trip.vibeTags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(AppTheme.sageMint.opacity(0.12))
+                                    .foregroundStyle(AppTheme.forestPrimary)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
                 
-                // 天数胶囊
-                Text("\(trip.days.count) 天行程")
-                    .font(.system(size: 11, weight: .bold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.blue.opacity(0.12))
-                    .foregroundStyle(AppTheme.indigoPrimary)
-                    .clipShape(Capsule())
-            }
-            
-            // 行程备注备忘
-            if !trip.notes.isEmpty {
-                Text(trip.notes)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .padding(.vertical, 2)
-            }
-            
-            Divider()
-                .opacity(0.6)
-            
-            // 底部流体进度条与打卡统计
-            HStack(spacing: 12) {
-                HStack(spacing: 6) {
-                    Image(systemName: "flag.checkered")
+                // 行程备忘摘要
+                if !trip.notes.isEmpty {
+                    Text(trip.notes)
                         .font(.caption)
-                        .foregroundStyle(trip.progress == 1.0 ? AppTheme.mintGreen : AppTheme.indigoPrimary)
-                    
-                    Text("打卡进度 \(trip.visitedNodesCount) / \(trip.totalNodesCount)")
-                        .font(.caption)
-                        .fontWeight(.medium)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .padding(.vertical, 1)
                 }
                 
-                Spacer()
+                Divider()
+                    .opacity(0.6)
                 
-                // 进度百分比数字
-                Text("\(Int(trip.progress * 100))%")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(trip.progress == 1.0 ? AppTheme.mintGreen : AppTheme.indigoPrimary)
-                
-                // 平滑圆角进度条
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.primary.opacity(0.08))
-                            .frame(height: 6)
+                // 底部流体进度条与打卡统计
+                HStack(spacing: 12) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "flag.checkered")
+                            .font(.caption)
+                            .foregroundStyle(trip.progress == 1.0 ? AppTheme.luminousMint : AppTheme.forestPrimary)
                         
-                        Capsule()
-                            .fill(
-                                trip.progress == 1.0
-                                ? LinearGradient(colors: [AppTheme.mintGreen, Color(hex: "34D399")], startPoint: .leading, endPoint: .trailing)
-                                : AppTheme.brandGradient
-                            )
-                            .frame(width: geo.size.width * CGFloat(trip.progress), height: 6)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: trip.progress)
+                        Text("打卡进度 \(trip.visitedNodesCount) / \(trip.totalNodesCount)")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
                     }
+                    
+                    Spacer()
+                    
+                    // 进度百分比数字
+                    Text("\(Int(trip.progress * 100))%")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(trip.progress == 1.0 ? AppTheme.sageMint : AppTheme.forestPrimary)
+                    
+                    // 平滑圆角进度条
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.primary.opacity(0.08))
+                                .frame(height: 6)
+                            
+                            Capsule()
+                                .fill(
+                                    trip.progress == 1.0
+                                    ? AppTheme.emeraldGlowGradient
+                                    : AppTheme.brandGradient
+                                )
+                                .frame(width: geo.size.width * CGFloat(trip.progress), height: 6)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: trip.progress)
+                        }
+                    }
+                    .frame(width: 64, height: 6)
                 }
-                .frame(width: 64, height: 6)
             }
+            .padding(20)
+            .elevatedCard(cornerRadius: 24)
         }
-        .padding(20)
-        .elevatedCard(cornerRadius: 24)
     }
 }
 

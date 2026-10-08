@@ -7,69 +7,69 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		016E54108F774DAA9F66BE56 /* JustYourTrip/Views/Trip/NodeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0E72E42C7847E1992EB67A /* JustYourTrip/Views/Trip/NodeCardView.swift */; };
-		0878DF97E4764BE1964EC741 /* JustYourTrip/Views/AIImport/AIImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90A93F55430A4AE292A8586F /* JustYourTrip/Views/AIImport/AIImportSheet.swift */; };
-		0E7C40EAC01248C481A2A762 /* JustYourTrip/Views/Trip/AddTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33AC82992ACE4DC59E9D3450 /* JustYourTrip/Views/Trip/AddTripSheet.swift */; };
-		1CE3A8ADFA0B4A20BB652A7A /* JustYourTrip/Views/Checklist/ChecklistTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DBF45DD122746B08C9592EB /* JustYourTrip/Views/Checklist/ChecklistTabView.swift */; };
-		2570871371FA4DD08F49CE31 /* JustYourTrip/Services/WebSnifferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B80C70E89D41378B0B8564 /* JustYourTrip/Services/WebSnifferService.swift */; };
-		2C56E3AB3FB84221A358B672 /* JustYourTrip/Views/Footprint/FootprintCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF330C13543A494994C2DBAF /* JustYourTrip/Views/Footprint/FootprintCardView.swift */; };
-		389D2ACABC3748F9BB42A490 /* JustYourTrip/Models/MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931BC3F6A35F48608139BE08 /* JustYourTrip/Models/MockData.swift */; };
-		3E06436317724BD7BE2C5DCF /* JustYourTrip/Models/ChecklistItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA5786224219469AB05AF654 /* JustYourTrip/Models/ChecklistItem.swift */; };
-		4A4559D347134BD288CAAB12 /* JustYourTrip/Views/Trip/TripDayTimelineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 217CFF2491304AE3B5B1CD84 /* JustYourTrip/Views/Trip/TripDayTimelineSheet.swift */; };
-		6816BF6626D241A6905C3743 /* JustYourTrip/Views/Trip/AddNodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB681F02E25C45659D56FB34 /* JustYourTrip/Views/Trip/AddNodeSheet.swift */; };
-		6C69E602AD8646DD80B086A8 /* JustYourTrip/Models/TripPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47E648D9FF0641608FB5A1ED /* JustYourTrip/Models/TripPlan.swift */; };
-		6DF5664B7437405EB0429500 /* JustYourTrip/Theme/AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19AE3F56B48B4172B2C4FF8E /* JustYourTrip/Theme/AppTheme.swift */; };
-		753D705BAEB54F149EAF0621 /* JustYourTrip/Services/LLMParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4BFDA2F8CF448684C8814B /* JustYourTrip/Services/LLMParserService.swift */; };
-		8444525DEEBB414D9875F89C /* JustYourTrip/Views/Trip/NodeMarkerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B122C29A2041FEBC64FEDF /* JustYourTrip/Views/Trip/NodeMarkerView.swift */; };
-		8C640CD1CCA040FBA9DE7F31 /* JustYourTrip/Services/GeocodingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34CD09998626447DA1634D80 /* JustYourTrip/Services/GeocodingService.swift */; };
-		8C691C7FA3BE4098B4D50A4D /* JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3576E400CE3D416BA9A7401E /* JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift */; };
-		915068F2EA0D44EF9ECCEDC5 /* JustYourTrip/Views/Footprint/FootprintMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D08F77DCAD94AC9A89B03A2 /* JustYourTrip/Views/Footprint/FootprintMapView.swift */; };
-		9B57831F89D349A7A458DB36 /* JustYourTrip/Models/TripDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20AB00487D64679B7648450 /* JustYourTrip/Models/TripDay.swift */; };
-		A4CCB229CD2F48888CBD4166 /* JustYourTrip/Views/AIImport/DraftCalibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C274D957EC514F17BD714D3E /* JustYourTrip/Views/AIImport/DraftCalibrationView.swift */; };
-		A4E292662C1E43A6A06FF55A /* JustYourTrip/Models/RouteNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C5F21D30224E51A9437E3D /* JustYourTrip/Models/RouteNode.swift */; };
-		ABFF2CF0469146FEBB420A34 /* JustYourTrip/Services/NavigationRelayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D187BD422BD04A8BA97BDEF0 /* JustYourTrip/Services/NavigationRelayService.swift */; };
-		B7BBCE0BB4174D1DAFD238DD /* JustYourTrip/Services/SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE982F798C9D462A87F3DB31 /* JustYourTrip/Services/SettingsManager.swift */; };
-		CE0C60A9B4C74A1397F9262B /* JustYourTrip/Views/Trip/TripDetailMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CA57839203A4B9085D46B1A /* JustYourTrip/Views/Trip/TripDetailMapView.swift */; };
-		D5AE3D80FDC94BA5B557C956 /* JustYourTrip/Views/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE37003989F24E24A7ACDC78 /* JustYourTrip/Views/Settings/SettingsView.swift */; };
-		D7AE693C80EC46F1B8A22BE1 /* JustYourTrip/App/JustYourTripApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AE55367944649B19AFEEFAB /* JustYourTrip/App/JustYourTripApp.swift */; };
-		DD4D42E625AE4DA797029F4D /* JustYourTrip/Views/MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11677FEFCB70419DBFAF3BFD /* JustYourTrip/Views/MainTabView.swift */; };
-		E561472BE4E74F52BA6A7301 /* JustYourTrip/Views/Trip/TripListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4AA14DFD07248C09D789226 /* JustYourTrip/Views/Trip/TripListView.swift */; };
+		FDA7F98D1BC54DB69EF7370F /* JustYourTripApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60052255609E4274934CC070 /* JustYourTripApp.swift */; };
+		8AD77591B7204D49A051CF12 /* ChecklistItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A035645562254B5A99393E2F /* ChecklistItem.swift */; };
+		85FBB01DAC0C4D6AA822298D /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C8AC68004EC47D59C9146EF /* MockData.swift */; };
+		FC790EF95AAD4CAD89C87835 /* RouteNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 078F7AF6D23D488B89EEFCA0 /* RouteNode.swift */; };
+		F3BF603D27334EEEA5D625A8 /* TripDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026AECBD80894B0DA59D0A42 /* TripDay.swift */; };
+		EDFB4280DAF443CFBCE7E276 /* TripPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3E8CA2106064B438C7E2364 /* TripPlan.swift */; };
+		BC1EC4AC624443C3B22707B4 /* GeocodingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B7CE057B8540E3962BB131 /* GeocodingService.swift */; };
+		CD8B09E166B24490ACB3138F /* LLMParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35F7E1A00D564A5DAA130605 /* LLMParserService.swift */; };
+		7E23D3AF12BD488FB71DD9E4 /* NavigationRelayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED1CCBF6DA8346A788C9835E /* NavigationRelayService.swift */; };
+		02B803DDF94B46249318E29D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46C0AEFC0F9643B18871BDB1 /* SettingsManager.swift */; };
+		6FF85943AC13445D816A2FAE /* WebSnifferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DCF4D0AA29448D682588535 /* WebSnifferService.swift */; };
+		3EFF77A684AE41098104EE41 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B34A2650A4A4FE68938AD33 /* AppTheme.swift */; };
+		FB09B66631CB4597A70FE60C /* AIImportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44BB37E664248FBB1EA7401 /* AIImportSheet.swift */; };
+		5B92CAFFC9944BD18FF31C3F /* DraftCalibrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F7EECA7FF2C44E8B583DE8C /* DraftCalibrationView.swift */; };
+		7F85CA70D3CA4462B40B9A36 /* AddChecklistItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD6FA69D085A42BCB471BCA7 /* AddChecklistItemSheet.swift */; };
+		AAE1BBD8DBA1448F964038BD /* ChecklistTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5A2B079A284DE0A4BBD4BD /* ChecklistTabView.swift */; };
+		5BD1AE5E358443918DD20FD6 /* FootprintCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820B57558B914E9684BCA158 /* FootprintCardView.swift */; };
+		C61876C349974131845810C1 /* FootprintMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E78860D9E984309BD8AE338 /* FootprintMapView.swift */; };
+		571C0E5971224501A87BA845 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE8C9BED0304AE9A432F999 /* MainTabView.swift */; };
+		03EADC68FC5141BE9812B30F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97B8475DD26E4185B281D301 /* SettingsView.swift */; };
+		F368E996084E466C9C51D0FA /* AddNodeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88BE22E0A8AA48059D64D460 /* AddNodeSheet.swift */; };
+		E0AFF75D46E940E8BC0333DC /* AddTripSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53E6AA22861A4B9D8F7CD71C /* AddTripSheet.swift */; };
+		B1BEC579241749A2AB6FD5FE /* NodeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC7CF90330E4B0D9A1A6609 /* NodeCardView.swift */; };
+		E8B630FA7D7245BFBA19149B /* NodeMarkerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0ECE310617E4207BA9015AF /* NodeMarkerView.swift */; };
+		DB8473E6D9E24F0BA89A8A21 /* TripDayTimelineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0FF60AA9254C588E41BB7C /* TripDayTimelineSheet.swift */; };
+		D3BB2AE9FE4E451FB9A4FE82 /* TripDetailMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89703EECC29B46EE8907E1C0 /* TripDetailMapView.swift */; };
+		5884B453DC0F4EE69EC40DD1 /* TripListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 396AE0E3D7D24D99B7580519 /* TripListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		11677FEFCB70419DBFAF3BFD /* JustYourTrip/Views/MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/MainTabView.swift; sourceTree = "<group>"; };
-		14E8C99BDAE24AF4B6DCB8ED /* JustYourTrip/Resources/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = JustYourTrip/Resources/Info.plist; sourceTree = "<group>"; };
-		19AE3F56B48B4172B2C4FF8E /* JustYourTrip/Theme/AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Theme/AppTheme.swift; sourceTree = "<group>"; };
-		217CFF2491304AE3B5B1CD84 /* JustYourTrip/Views/Trip/TripDayTimelineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/TripDayTimelineSheet.swift; sourceTree = "<group>"; };
-		33AC82992ACE4DC59E9D3450 /* JustYourTrip/Views/Trip/AddTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/AddTripSheet.swift; sourceTree = "<group>"; };
-		34CD09998626447DA1634D80 /* JustYourTrip/Services/GeocodingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Services/GeocodingService.swift; sourceTree = "<group>"; };
-		3576E400CE3D416BA9A7401E /* JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift; sourceTree = "<group>"; };
-		47E648D9FF0641608FB5A1ED /* JustYourTrip/Models/TripPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Models/TripPlan.swift; sourceTree = "<group>"; };
-		4AE55367944649B19AFEEFAB /* JustYourTrip/App/JustYourTripApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/App/JustYourTripApp.swift; sourceTree = "<group>"; };
-		5DBF45DD122746B08C9592EB /* JustYourTrip/Views/Checklist/ChecklistTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Checklist/ChecklistTabView.swift; sourceTree = "<group>"; };
-		62C5F21D30224E51A9437E3D /* JustYourTrip/Models/RouteNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Models/RouteNode.swift; sourceTree = "<group>"; };
-		6CA57839203A4B9085D46B1A /* JustYourTrip/Views/Trip/TripDetailMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/TripDetailMapView.swift; sourceTree = "<group>"; };
-		8D08F77DCAD94AC9A89B03A2 /* JustYourTrip/Views/Footprint/FootprintMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Footprint/FootprintMapView.swift; sourceTree = "<group>"; };
-		90A93F55430A4AE292A8586F /* JustYourTrip/Views/AIImport/AIImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/AIImport/AIImportSheet.swift; sourceTree = "<group>"; };
-		931BC3F6A35F48608139BE08 /* JustYourTrip/Models/MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Models/MockData.swift; sourceTree = "<group>"; };
-		AA5786224219469AB05AF654 /* JustYourTrip/Models/ChecklistItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Models/ChecklistItem.swift; sourceTree = "<group>"; };
-		AD4BFDA2F8CF448684C8814B /* JustYourTrip/Services/LLMParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Services/LLMParserService.swift; sourceTree = "<group>"; };
-		BB681F02E25C45659D56FB34 /* JustYourTrip/Views/Trip/AddNodeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/AddNodeSheet.swift; sourceTree = "<group>"; };
-		BE4F35E070E543318C3688C4 /* JustYourTrip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustYourTrip.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C274D957EC514F17BD714D3E /* JustYourTrip/Views/AIImport/DraftCalibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/AIImport/DraftCalibrationView.swift; sourceTree = "<group>"; };
-		CE982F798C9D462A87F3DB31 /* JustYourTrip/Services/SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Services/SettingsManager.swift; sourceTree = "<group>"; };
-		CF330C13543A494994C2DBAF /* JustYourTrip/Views/Footprint/FootprintCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Footprint/FootprintCardView.swift; sourceTree = "<group>"; };
-		D187BD422BD04A8BA97BDEF0 /* JustYourTrip/Services/NavigationRelayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Services/NavigationRelayService.swift; sourceTree = "<group>"; };
-		D4B122C29A2041FEBC64FEDF /* JustYourTrip/Views/Trip/NodeMarkerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/NodeMarkerView.swift; sourceTree = "<group>"; };
-		E1B80C70E89D41378B0B8564 /* JustYourTrip/Services/WebSnifferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Services/WebSnifferService.swift; sourceTree = "<group>"; };
-		EE0E72E42C7847E1992EB67A /* JustYourTrip/Views/Trip/NodeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/NodeCardView.swift; sourceTree = "<group>"; };
-		EE37003989F24E24A7ACDC78 /* JustYourTrip/Views/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Settings/SettingsView.swift; sourceTree = "<group>"; };
-		F20AB00487D64679B7648450 /* JustYourTrip/Models/TripDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Models/TripDay.swift; sourceTree = "<group>"; };
-		F4AA14DFD07248C09D789226 /* JustYourTrip/Views/Trip/TripListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JustYourTrip/Views/Trip/TripListView.swift; sourceTree = "<group>"; };
+		60052255609E4274934CC070 /* JustYourTripApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/App/JustYourTripApp.swift"; sourceTree = "<group>"; };
+		A035645562254B5A99393E2F /* ChecklistItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Models/ChecklistItem.swift"; sourceTree = "<group>"; };
+		4C8AC68004EC47D59C9146EF /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Models/MockData.swift"; sourceTree = "<group>"; };
+		078F7AF6D23D488B89EEFCA0 /* RouteNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Models/RouteNode.swift"; sourceTree = "<group>"; };
+		026AECBD80894B0DA59D0A42 /* TripDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Models/TripDay.swift"; sourceTree = "<group>"; };
+		B3E8CA2106064B438C7E2364 /* TripPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Models/TripPlan.swift"; sourceTree = "<group>"; };
+		A6B7CE057B8540E3962BB131 /* GeocodingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Services/GeocodingService.swift"; sourceTree = "<group>"; };
+		35F7E1A00D564A5DAA130605 /* LLMParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Services/LLMParserService.swift"; sourceTree = "<group>"; };
+		ED1CCBF6DA8346A788C9835E /* NavigationRelayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Services/NavigationRelayService.swift"; sourceTree = "<group>"; };
+		46C0AEFC0F9643B18871BDB1 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Services/SettingsManager.swift"; sourceTree = "<group>"; };
+		8DCF4D0AA29448D682588535 /* WebSnifferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Services/WebSnifferService.swift"; sourceTree = "<group>"; };
+		3B34A2650A4A4FE68938AD33 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Theme/AppTheme.swift"; sourceTree = "<group>"; };
+		A44BB37E664248FBB1EA7401 /* AIImportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/AIImport/AIImportSheet.swift"; sourceTree = "<group>"; };
+		2F7EECA7FF2C44E8B583DE8C /* DraftCalibrationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/AIImport/DraftCalibrationView.swift"; sourceTree = "<group>"; };
+		CD6FA69D085A42BCB471BCA7 /* AddChecklistItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift"; sourceTree = "<group>"; };
+		4E5A2B079A284DE0A4BBD4BD /* ChecklistTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Checklist/ChecklistTabView.swift"; sourceTree = "<group>"; };
+		820B57558B914E9684BCA158 /* FootprintCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Footprint/FootprintCardView.swift"; sourceTree = "<group>"; };
+		2E78860D9E984309BD8AE338 /* FootprintMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Footprint/FootprintMapView.swift"; sourceTree = "<group>"; };
+		CFE8C9BED0304AE9A432F999 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/MainTabView.swift"; sourceTree = "<group>"; };
+		97B8475DD26E4185B281D301 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Settings/SettingsView.swift"; sourceTree = "<group>"; };
+		88BE22E0A8AA48059D64D460 /* AddNodeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/AddNodeSheet.swift"; sourceTree = "<group>"; };
+		53E6AA22861A4B9D8F7CD71C /* AddTripSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/AddTripSheet.swift"; sourceTree = "<group>"; };
+		0DC7CF90330E4B0D9A1A6609 /* NodeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/NodeCardView.swift"; sourceTree = "<group>"; };
+		F0ECE310617E4207BA9015AF /* NodeMarkerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/NodeMarkerView.swift"; sourceTree = "<group>"; };
+		4B0FF60AA9254C588E41BB7C /* TripDayTimelineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/TripDayTimelineSheet.swift"; sourceTree = "<group>"; };
+		89703EECC29B46EE8907E1C0 /* TripDetailMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/TripDetailMapView.swift"; sourceTree = "<group>"; };
+		396AE0E3D7D24D99B7580519 /* TripListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "JustYourTrip/Views/Trip/TripListView.swift"; sourceTree = "<group>"; };
+		108D98BC3CDA4DBEA1B5F444 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "JustYourTrip/Resources/Info.plist"; sourceTree = "<group>"; };
+		9A69135975564051B3061D1A /* JustYourTrip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JustYourTrip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		98AA536067B64157BE8F2ACB /* Frameworks */ = {
+		1307652414084FAF902D741D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -79,59 +79,59 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		2ACF4C9910A8407884C91E59 /* Products */ = {
+		A779DE132E8149AABF116322 = {
 			isa = PBXGroup;
 			children = (
-				BE4F35E070E543318C3688C4 /* JustYourTrip.app */,
+				50CBD4EA2CA041DF9445012E /* Products */,
+				60052255609E4274934CC070 /* JustYourTripApp.swift */,
+				A035645562254B5A99393E2F /* ChecklistItem.swift */,
+				4C8AC68004EC47D59C9146EF /* MockData.swift */,
+				078F7AF6D23D488B89EEFCA0 /* RouteNode.swift */,
+				026AECBD80894B0DA59D0A42 /* TripDay.swift */,
+				B3E8CA2106064B438C7E2364 /* TripPlan.swift */,
+				A6B7CE057B8540E3962BB131 /* GeocodingService.swift */,
+				35F7E1A00D564A5DAA130605 /* LLMParserService.swift */,
+				ED1CCBF6DA8346A788C9835E /* NavigationRelayService.swift */,
+				46C0AEFC0F9643B18871BDB1 /* SettingsManager.swift */,
+				8DCF4D0AA29448D682588535 /* WebSnifferService.swift */,
+				3B34A2650A4A4FE68938AD33 /* AppTheme.swift */,
+				A44BB37E664248FBB1EA7401 /* AIImportSheet.swift */,
+				2F7EECA7FF2C44E8B583DE8C /* DraftCalibrationView.swift */,
+				CD6FA69D085A42BCB471BCA7 /* AddChecklistItemSheet.swift */,
+				4E5A2B079A284DE0A4BBD4BD /* ChecklistTabView.swift */,
+				820B57558B914E9684BCA158 /* FootprintCardView.swift */,
+				2E78860D9E984309BD8AE338 /* FootprintMapView.swift */,
+				CFE8C9BED0304AE9A432F999 /* MainTabView.swift */,
+				97B8475DD26E4185B281D301 /* SettingsView.swift */,
+				88BE22E0A8AA48059D64D460 /* AddNodeSheet.swift */,
+				53E6AA22861A4B9D8F7CD71C /* AddTripSheet.swift */,
+				0DC7CF90330E4B0D9A1A6609 /* NodeCardView.swift */,
+				F0ECE310617E4207BA9015AF /* NodeMarkerView.swift */,
+				4B0FF60AA9254C588E41BB7C /* TripDayTimelineSheet.swift */,
+				89703EECC29B46EE8907E1C0 /* TripDetailMapView.swift */,
+				396AE0E3D7D24D99B7580519 /* TripListView.swift */,
+				108D98BC3CDA4DBEA1B5F444 /* Info.plist */,
 			);
-			name = Products;
 			sourceTree = "<group>";
 		};
-		BFD1090BF6B24351B6C8AA59 = {
+		50CBD4EA2CA041DF9445012E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2ACF4C9910A8407884C91E59 /* Products */,
-				4AE55367944649B19AFEEFAB /* JustYourTrip/App/JustYourTripApp.swift */,
-				AA5786224219469AB05AF654 /* JustYourTrip/Models/ChecklistItem.swift */,
-				931BC3F6A35F48608139BE08 /* JustYourTrip/Models/MockData.swift */,
-				62C5F21D30224E51A9437E3D /* JustYourTrip/Models/RouteNode.swift */,
-				F20AB00487D64679B7648450 /* JustYourTrip/Models/TripDay.swift */,
-				47E648D9FF0641608FB5A1ED /* JustYourTrip/Models/TripPlan.swift */,
-				34CD09998626447DA1634D80 /* JustYourTrip/Services/GeocodingService.swift */,
-				AD4BFDA2F8CF448684C8814B /* JustYourTrip/Services/LLMParserService.swift */,
-				D187BD422BD04A8BA97BDEF0 /* JustYourTrip/Services/NavigationRelayService.swift */,
-				CE982F798C9D462A87F3DB31 /* JustYourTrip/Services/SettingsManager.swift */,
-				E1B80C70E89D41378B0B8564 /* JustYourTrip/Services/WebSnifferService.swift */,
-				19AE3F56B48B4172B2C4FF8E /* JustYourTrip/Theme/AppTheme.swift */,
-				90A93F55430A4AE292A8586F /* JustYourTrip/Views/AIImport/AIImportSheet.swift */,
-				C274D957EC514F17BD714D3E /* JustYourTrip/Views/AIImport/DraftCalibrationView.swift */,
-				3576E400CE3D416BA9A7401E /* JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift */,
-				5DBF45DD122746B08C9592EB /* JustYourTrip/Views/Checklist/ChecklistTabView.swift */,
-				CF330C13543A494994C2DBAF /* JustYourTrip/Views/Footprint/FootprintCardView.swift */,
-				8D08F77DCAD94AC9A89B03A2 /* JustYourTrip/Views/Footprint/FootprintMapView.swift */,
-				11677FEFCB70419DBFAF3BFD /* JustYourTrip/Views/MainTabView.swift */,
-				EE37003989F24E24A7ACDC78 /* JustYourTrip/Views/Settings/SettingsView.swift */,
-				BB681F02E25C45659D56FB34 /* JustYourTrip/Views/Trip/AddNodeSheet.swift */,
-				33AC82992ACE4DC59E9D3450 /* JustYourTrip/Views/Trip/AddTripSheet.swift */,
-				EE0E72E42C7847E1992EB67A /* JustYourTrip/Views/Trip/NodeCardView.swift */,
-				D4B122C29A2041FEBC64FEDF /* JustYourTrip/Views/Trip/NodeMarkerView.swift */,
-				217CFF2491304AE3B5B1CD84 /* JustYourTrip/Views/Trip/TripDayTimelineSheet.swift */,
-				6CA57839203A4B9085D46B1A /* JustYourTrip/Views/Trip/TripDetailMapView.swift */,
-				F4AA14DFD07248C09D789226 /* JustYourTrip/Views/Trip/TripListView.swift */,
-				14E8C99BDAE24AF4B6DCB8ED /* JustYourTrip/Resources/Info.plist */,
+				9A69135975564051B3061D1A /* JustYourTrip.app */,
 			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A83AACAFF4B041C891D38A10 /* JustYourTrip */ = {
+		640C8436725D4C8EBA0AD82E /* JustYourTrip */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = EE42DE24E2BA4D06A0BC439A /* Build configuration list for PBXNativeTarget "JustYourTrip" */;
+			buildConfigurationList = FEBEFDBA13D24D9CBE1C832C /* Build configuration list for PBXNativeTarget "JustYourTrip" */;
 			buildPhases = (
-				8CCC17D999304C9383BFED57 /* Sources */,
-				98AA536067B64157BE8F2ACB /* Frameworks */,
-				55145E837B34455EAC8D928A /* Resources */,
+				5ED78E8404D541BE9C032374 /* Sources */,
+				1307652414084FAF902D741D /* Frameworks */,
+				9F0847617596420E89000119 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -139,25 +139,25 @@
 			);
 			name = JustYourTrip;
 			productName = JustYourTrip;
-			productReference = BE4F35E070E543318C3688C4 /* JustYourTrip.app */;
+			productReference = 9A69135975564051B3061D1A /* JustYourTrip.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		0AC459668D5F4C448CEB7655 /* Project object */ = {
+		97AEFC1C9E91440B91ED0B63 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
-					A83AACAFF4B041C891D38A10 = {
+					640C8436725D4C8EBA0AD82E = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
-			buildConfigurationList = FCEB5A28C85F46D5A19CF0C3 /* Build configuration list for PBXProject "JustYourTrip" */;
+			buildConfigurationList = 5677CC31C2214391923CC08E /* Build configuration list for PBXProject "JustYourTrip" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -165,18 +165,18 @@
 				en,
 				Base,
 			);
-			mainGroup = BFD1090BF6B24351B6C8AA59;
-			productRefGroup = 2ACF4C9910A8407884C91E59 /* Products */;
+			mainGroup = A779DE132E8149AABF116322;
+			productRefGroup = 50CBD4EA2CA041DF9445012E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A83AACAFF4B041C891D38A10 /* JustYourTrip */,
+				640C8436725D4C8EBA0AD82E /* JustYourTrip */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		55145E837B34455EAC8D928A /* Resources */ = {
+		9F0847617596420E89000119 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -186,87 +186,44 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		8CCC17D999304C9383BFED57 /* Sources */ = {
+		5ED78E8404D541BE9C032374 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D7AE693C80EC46F1B8A22BE1 /* JustYourTrip/App/JustYourTripApp.swift in Sources */,
-				3E06436317724BD7BE2C5DCF /* JustYourTrip/Models/ChecklistItem.swift in Sources */,
-				389D2ACABC3748F9BB42A490 /* JustYourTrip/Models/MockData.swift in Sources */,
-				A4E292662C1E43A6A06FF55A /* JustYourTrip/Models/RouteNode.swift in Sources */,
-				9B57831F89D349A7A458DB36 /* JustYourTrip/Models/TripDay.swift in Sources */,
-				6C69E602AD8646DD80B086A8 /* JustYourTrip/Models/TripPlan.swift in Sources */,
-				8C640CD1CCA040FBA9DE7F31 /* JustYourTrip/Services/GeocodingService.swift in Sources */,
-				753D705BAEB54F149EAF0621 /* JustYourTrip/Services/LLMParserService.swift in Sources */,
-				ABFF2CF0469146FEBB420A34 /* JustYourTrip/Services/NavigationRelayService.swift in Sources */,
-				B7BBCE0BB4174D1DAFD238DD /* JustYourTrip/Services/SettingsManager.swift in Sources */,
-				2570871371FA4DD08F49CE31 /* JustYourTrip/Services/WebSnifferService.swift in Sources */,
-				6DF5664B7437405EB0429500 /* JustYourTrip/Theme/AppTheme.swift in Sources */,
-				0878DF97E4764BE1964EC741 /* JustYourTrip/Views/AIImport/AIImportSheet.swift in Sources */,
-				A4CCB229CD2F48888CBD4166 /* JustYourTrip/Views/AIImport/DraftCalibrationView.swift in Sources */,
-				8C691C7FA3BE4098B4D50A4D /* JustYourTrip/Views/Checklist/AddChecklistItemSheet.swift in Sources */,
-				1CE3A8ADFA0B4A20BB652A7A /* JustYourTrip/Views/Checklist/ChecklistTabView.swift in Sources */,
-				2C56E3AB3FB84221A358B672 /* JustYourTrip/Views/Footprint/FootprintCardView.swift in Sources */,
-				915068F2EA0D44EF9ECCEDC5 /* JustYourTrip/Views/Footprint/FootprintMapView.swift in Sources */,
-				DD4D42E625AE4DA797029F4D /* JustYourTrip/Views/MainTabView.swift in Sources */,
-				D5AE3D80FDC94BA5B557C956 /* JustYourTrip/Views/Settings/SettingsView.swift in Sources */,
-				6816BF6626D241A6905C3743 /* JustYourTrip/Views/Trip/AddNodeSheet.swift in Sources */,
-				0E7C40EAC01248C481A2A762 /* JustYourTrip/Views/Trip/AddTripSheet.swift in Sources */,
-				016E54108F774DAA9F66BE56 /* JustYourTrip/Views/Trip/NodeCardView.swift in Sources */,
-				8444525DEEBB414D9875F89C /* JustYourTrip/Views/Trip/NodeMarkerView.swift in Sources */,
-				4A4559D347134BD288CAAB12 /* JustYourTrip/Views/Trip/TripDayTimelineSheet.swift in Sources */,
-				CE0C60A9B4C74A1397F9262B /* JustYourTrip/Views/Trip/TripDetailMapView.swift in Sources */,
-				E561472BE4E74F52BA6A7301 /* JustYourTrip/Views/Trip/TripListView.swift in Sources */,
+				FDA7F98D1BC54DB69EF7370F /* JustYourTripApp.swift in Sources */,
+				8AD77591B7204D49A051CF12 /* ChecklistItem.swift in Sources */,
+				85FBB01DAC0C4D6AA822298D /* MockData.swift in Sources */,
+				FC790EF95AAD4CAD89C87835 /* RouteNode.swift in Sources */,
+				F3BF603D27334EEEA5D625A8 /* TripDay.swift in Sources */,
+				EDFB4280DAF443CFBCE7E276 /* TripPlan.swift in Sources */,
+				BC1EC4AC624443C3B22707B4 /* GeocodingService.swift in Sources */,
+				CD8B09E166B24490ACB3138F /* LLMParserService.swift in Sources */,
+				7E23D3AF12BD488FB71DD9E4 /* NavigationRelayService.swift in Sources */,
+				02B803DDF94B46249318E29D /* SettingsManager.swift in Sources */,
+				6FF85943AC13445D816A2FAE /* WebSnifferService.swift in Sources */,
+				3EFF77A684AE41098104EE41 /* AppTheme.swift in Sources */,
+				FB09B66631CB4597A70FE60C /* AIImportSheet.swift in Sources */,
+				5B92CAFFC9944BD18FF31C3F /* DraftCalibrationView.swift in Sources */,
+				7F85CA70D3CA4462B40B9A36 /* AddChecklistItemSheet.swift in Sources */,
+				AAE1BBD8DBA1448F964038BD /* ChecklistTabView.swift in Sources */,
+				5BD1AE5E358443918DD20FD6 /* FootprintCardView.swift in Sources */,
+				C61876C349974131845810C1 /* FootprintMapView.swift in Sources */,
+				571C0E5971224501A87BA845 /* MainTabView.swift in Sources */,
+				03EADC68FC5141BE9812B30F /* SettingsView.swift in Sources */,
+				F368E996084E466C9C51D0FA /* AddNodeSheet.swift in Sources */,
+				E0AFF75D46E940E8BC0333DC /* AddTripSheet.swift in Sources */,
+				B1BEC579241749A2AB6FD5FE /* NodeCardView.swift in Sources */,
+				E8B630FA7D7245BFBA19149B /* NodeMarkerView.swift in Sources */,
+				DB8473E6D9E24F0BA89A8A21 /* TripDayTimelineSheet.swift in Sources */,
+				D3BB2AE9FE4E451FB9A4FE82 /* TripDetailMapView.swift in Sources */,
+				5884B453DC0F4EE69EC40DD1 /* TripListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		21C7A66A4F864420812F621A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				ENABLE_NS_ASSERTIONS = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
-		36D68718495543B196DC80CC /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = JTQCQL8MVH;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = JustYourTrip/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.yourtrip.JustYourTrip;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		4219BC3E6FA843BEB7B98C60 /* Debug */ = {
+		9919387461B44542A3CF6749 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -290,7 +247,24 @@
 			};
 			name = Debug;
 		};
-		605100C5F0554F1F82CE8E60 /* Debug */ = {
+		B9BB8448BF5B4501ADE7E42C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		35A84FDE433D40D59569C1C1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -298,7 +272,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = JTQCQL8MVH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = JustYourTrip/Resources/Info.plist;
@@ -316,28 +289,54 @@
 			};
 			name = Debug;
 		};
+		45D2EB9EA212494DAF291492 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = JustYourTrip/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourtrip.JustYourTrip;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		EE42DE24E2BA4D06A0BC439A /* Build configuration list for PBXNativeTarget "JustYourTrip" */ = {
+		5677CC31C2214391923CC08E /* Build configuration list for PBXProject "JustYourTrip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				605100C5F0554F1F82CE8E60 /* Debug */,
-				36D68718495543B196DC80CC /* Release */,
+				9919387461B44542A3CF6749 /* Debug */,
+				B9BB8448BF5B4501ADE7E42C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		FCEB5A28C85F46D5A19CF0C3 /* Build configuration list for PBXProject "JustYourTrip" */ = {
+		FEBEFDBA13D24D9CBE1C832C /* Build configuration list for PBXNativeTarget "JustYourTrip" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4219BC3E6FA843BEB7B98C60 /* Debug */,
-				21C7A66A4F864420812F621A /* Release */,
+				35A84FDE433D40D59569C1C1 /* Debug */,
+				45D2EB9EA212494DAF291492 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
 	};
-	rootObject = 0AC459668D5F4C448CEB7655 /* Project object */;
+	rootObject = 97AEFC1C9E91440B91ED0B63 /* Project object */;
 }
