@@ -73,7 +73,8 @@ JustYourTrip/
 │   ├── LLMParserService.swift         # 直连大模型结构化路线提取 (JSON Mode)
 │   ├── WebSnifferService.swift        # 纯端侧无头 WKWebView 笔记文本抓取
 │   ├── GeocodingService.swift         # CLGeocoder 地理编码与坐标反查
-│   └── SettingsManager.swift          # BYOK 密钥与端侧配置管理
+│   ├── SettingsManager.swift          # BYOK 密钥与端侧配置管理
+│   └── TripBackupService.swift        # 离线 JSON 全量备份导出/恢复与 API 连通性测试
 ├── Theme/
 │   └── AppTheme.swift                 # 全局色系、渐变、Taptic 反馈与卡片 Modifier
 └── Views/
@@ -96,8 +97,7 @@ JustYourTrip/
     │   ├── AIImportSheet.swift        # 小红书/社媒链接粘贴嗅探与提取
     │   └── DraftCalibrationView.swift # 地图预览校准与一键入库
     └── Settings/
-        └── SettingsView.swift         # BYOK 模型服务商与 API Key 设置
-```
+        └── SettingsView.swift         # 护照 Header · BYOK 配置 · 连通性测试 · 离线全量 JSON 备份
 
 ---
 
@@ -132,24 +132,25 @@ JustYourTrip/
   - [x] **触感交互行卡片（ChecklistItemRow）**：勾选伴随触觉微震、文本划线与完成态动画，支持右侧快速删除；
   - [x] **快捷操作菜单**：一键套用 12 项经典出行模版、一键重置勾选状态；
   - [x] **按行程切换胶囊条（Trip Picker Bar）**：自由在全局清单与各个独立行程打包清单间无缝切换。
-
----
-
 - [x] **第五阶段：AI 导入流视觉动效与草稿校准升级**：
   - [x] **三步骤解析流水线与雷达脉冲动效（AIImportSheet）**：网页嗅探、模型解构、地理反查三阶段状态机流转与发光脉冲光点；
   - [x] **一键快速体验样例（Quick Preset Banner）**：无需手动寻找社媒链接，一键填入上海武康路安福路经典 Citywalk 示例；
   - [x] **全景动态草稿地图（DraftCalibrationView）**：带实线轨迹连线 `MapPolyline`、数字序号 Pin、一键全览当日视野（`fitMapToCurrentDay`）；
   - [x] **手账风格草稿节点卡片与拖拽调序**：支持在校准阶段上下拖拽重排顺序（`.onMove`）、左滑删除（`.onDelete`）、微调经纬度与游玩时长（`EditDraftNodeSheet`）；
   - [x] **AI 行前特需必备行李推荐入库**：直观展示 AI 针对该行程生成的特需物品，一键入库自动同步至行前准备模块。
+- [x] **第六阶段：设置页与手账数据中心升级（SettingsView & TripBackupService）**：
+  - [x] **旅行护照风 Header**：极客单机向、纯端侧本地优先认证签注徽标；
+  - [x] **主流大模型预设与连通性测试（Ping）**：支持 DeepSeek、OpenAI、Kimi、硅基流动一键切换，自带低耗时端侧 Ping 延迟探测；
+  - [x] **离线全量 JSON 备份与恢复（Data Vault）**：一键导出所有行程与行李至 `.json`，支持系统分享与本地文件恢复导入；
+  - [x] **官方示例重置与偏好控制**：一键追加官方示例行程，足迹大地图中转站智能过滤联动。
 
 ---
 
-### 🚧 进行中 / 下一阶段目标（Next Up）
+### 🚧 后续优化方向（Future Roadmap）
 
-- [ ] **第六阶段：设置页（SettingsView）与手账数据管理升级**：
-  - [ ] 森林绿与毛玻璃质感的品牌 Header（手账护照风格）；
-  - [ ] API Key 连通性一键测试（Ping 验证可用性）；
-  - [ ] 本地行程数据 JSON 格式全量导出与备份导入（离线无网迁移）。
+- [ ] **多端适配与体验细节**：
+  - [ ] iPadOS 宽屏分栏 SplitView 与大屏地图优化；
+  - [ ] 行程卡片长按快速生成分享长图（旅行路书明信片卡）。
 
 ---
 
