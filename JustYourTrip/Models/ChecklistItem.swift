@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// 清单分类
-enum ChecklistCategory: String, Codable, CaseIterable, Identifiable {
+enum ChecklistCategory: String, Codable, CaseIterable, Identifiable, Hashable {
     case documents = "证件票务"
     case digital   = "数码装备"
     case clothing  = "穿搭衣物"
