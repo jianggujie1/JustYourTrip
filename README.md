@@ -1,7 +1,9 @@
-# 「你的旅游」（YourTrip）
+# 「你的旅游」（JustYourTrip）
 
 专属于个人的闭环出行管理中枢 —— **本地优先（Local-First）、零服务器开销、绝对隐私、丝滑互联**。
 基于 Swift 6 + SwiftUI + SwiftData + MapKit 深度定制的 iOS / iPadOS 纯原生单机向应用。
+
+> 📖 **开发接力与进度文档**：请查看 [HANDOFF.md](HANDOFF.md)，记录了跨设备开发交接规范、架构全景、最新进度及避坑守则。
 
 ---
 
