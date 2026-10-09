@@ -26,4 +26,15 @@ final class TripDay {
     var sortedNodes: [RouteNode] {
         nodes.sorted(by: { $0.sortOrder < $1.sortOrder })
     }
+    
+    /// 已打卡节点数
+    var visitedNodesCount: Int {
+        nodes.filter(\.isVisited).count
+    }
+    
+    /// 当日打卡完成比例 (0.0 - 1.0)
+    var progress: Double {
+        guard !nodes.isEmpty else { return 0 }
+        return Double(visitedNodesCount) / Double(nodes.count)
+    }
 }
