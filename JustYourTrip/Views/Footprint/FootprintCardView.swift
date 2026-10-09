@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 历史足迹点选回顾卡片 (空间毛玻璃与回忆手账微弹窗)
+/// 历史足迹点选回顾卡片 (旅行明信片与手账手稿风)
 struct FootprintCardView: View {
     let node: RouteNode
     var onClose: () -> Void
@@ -8,22 +8,34 @@ struct FootprintCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // 顶部明信片抬头：邮戳徽标与关闭按钮
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 5) {
+                // 所属行程与城市微标
+                VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Image(systemName: node.nodeType.systemIcon)
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.sunsetCoral)
-                        
-                        Text(node.nodeType.title)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(AppTheme.sunsetCoral)
+                        if let destination = node.day?.trip?.destination, !destination.isEmpty {
+                            HStack(spacing: 3) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 9))
+                                Text(destination)
+                                    .font(.system(size: 11, weight: .bold))
+                            }
                             .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(AppTheme.sunsetCoral.opacity(0.12))
+                            .padding(.vertical, 2.5)
+                            .background(AppTheme.forestPrimary.opacity(0.12))
+                            .foregroundStyle(AppTheme.forestPrimary)
                             .clipShape(Capsule())
+                        }
+                        
+                        if let tripTitle = node.day?.trip?.title {
+                            Text(tripTitle)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
                     
+                    // 节点主标题
                     Text(node.title)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
@@ -31,6 +43,7 @@ struct FootprintCardView: View {
                 
                 Spacer()
                 
+                // 关闭按钮
                 Button {
                     HapticFeedback.light()
                     onClose()
@@ -43,47 +56,67 @@ struct FootprintCardView: View {
                 .buttonStyle(.plain)
             }
             
-            // 打卡时间与所属行程胶囊
-            HStack(spacing: 12) {
+            // 中部：分类徽章与打卡邮戳
+            HStack(spacing: 10) {
+                // 类型徽章
+                HStack(spacing: 4) {
+                    Image(systemName: node.nodeType.systemIcon)
+                        .font(.system(size: 10))
+                    Text(node.nodeType.title)
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(typeBadgeColor.opacity(0.12))
+                .foregroundStyle(typeBadgeColor)
+                .clipShape(Capsule())
+                
+                // 仿复古打卡时间邮戳
                 if let visitedDate = node.visitedAt {
                     HStack(spacing: 4) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.caption2)
-                        Text(visitedDate.formatted(.dateTime.year().month().day().hour().minute()))
-                            .font(.caption)
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppTheme.sageMint)
+                        Text("打卡于 \(visitedDate.formatted(.dateTime.year().month().day().hour().minute()))")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(AppTheme.sageMint)
                     }
-                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.sageMint.opacity(0.08))
+                    .clipShape(Capsule())
                 }
                 
-                if let tripTitle = node.day?.trip?.title {
-                    HStack(spacing: 4) {
-                        Image(systemName: "airplane")
-                            .font(.caption2)
-                        Text(tripTitle)
-                            .font(.caption)
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(AppTheme.indigoPrimary)
-                }
+                Spacer()
             }
             
-            // 游记随笔或避坑心得
+            // 游记心得或避坑手账便签
             if !node.tips.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("💭 探索心得与贴士")
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 4) {
+                        Text("💭")
+                            .font(.system(size: 11))
+                        Text("探索随笔与攻略")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(AppTheme.warmAmber)
+                    }
                     
                     Text(node.tips)
                         .font(.system(size: 13))
                         .foregroundStyle(.primary.opacity(0.85))
                         .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.orange.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(AppTheme.warmAmber.opacity(0.2), lineWidth: 0.8)
+                )
             }
             
             // 底部操作栏：一键精准重游导航
@@ -95,21 +128,34 @@ struct FootprintCardView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                            .font(.system(size: 11))
-                        Text("导航去这里")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 12))
+                        Text("重游导航")
+                            .font(.system(size: 13, weight: .semibold))
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                     .background(AppTheme.brandGradient)
                     .foregroundStyle(.white)
                     .clipShape(Capsule())
-                    .shadow(color: AppTheme.indigoPrimary.opacity(0.3), radius: 6, x: 0, y: 2)
+                    .shadow(color: AppTheme.sageMint.opacity(0.35), radius: 6, x: 0, y: 3)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(20)
-        .glassCard(cornerRadius: 24)
+        .padding(18)
+        .glassCard(cornerRadius: 22)
         .padding(.horizontal, 16)
+    }
+    
+    private var typeBadgeColor: Color {
+        switch node.nodeType {
+        case .attraction: return AppTheme.sunsetCoral
+        case .restaurant: return AppTheme.warmAmber
+        case .hotel: return AppTheme.royalPurple
+        case .transitBus: return AppTheme.skyTeal
+        case .transitSub: return AppTheme.indigoPrimary
+        case .parkingLot: return Color.brown
+        case .other: return Color.gray
+        }
     }
 }
