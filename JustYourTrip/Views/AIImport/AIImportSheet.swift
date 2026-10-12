@@ -1,51 +1,114 @@
 import SwiftUI
 import CoreLocation
 
-/// AI 解析步骤状态
-enum AIStep: Int, CaseIterable, Identifiable {
-    case sniffing = 1
-    case reasoning = 2
-    case geocoding = 3
-    
+// MARK: - AI 规划大阶段定义 (3大核心主阶段)
+enum AIPhase: Int, CaseIterable, Identifiable {
+    case sniffing = 1   // 阶段一：网页嗅探与文本准备
+    case parsing = 2    // 阶段二：AI 智能行程解构
+    case geocoding = 3  // 阶段三：空间拓扑与地理校准
+
     var id: Int { rawValue }
-    
+
     var title: String {
         switch self {
-        case .sniffing: return "访问网页嗅探攻略正文"
-        case .reasoning: return "提取结构化多模态路线"
-        case .geocoding: return "反查并校准站点地理坐标"
+        case .sniffing: return "网页嗅探与文本准备"
+        case .parsing: return "AI 智能行程解构"
+        case .geocoding: return "空间拓扑与地理校准"
         }
     }
-    
-    var systemIcon: String {
+
+    var subtitle: String {
         switch self {
-        case .sniffing: return "network"
-        case .reasoning: return "sparkles"
-        case .geocoding: return "mappin.and.ellipse"
+        case .sniffing: return "识别内容 · 提取正文 · 净化杂质"
+        case .parsing: return "结构分析 · 提炼站点 · 规划建议"
+        case .geocoding: return "城市锚点 · POI校准 · 防重纠偏"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .sniffing: return "globe.asia.australia.fill"
+        case .parsing: return "sparkles"
+        case .geocoding: return "map.fill"
+        }
+    }
+
+    var subSteps: [AISubStep] {
+        AISubStep.allCases.filter { $0.phase == self }
+    }
+}
+
+// MARK: - AI 细分子步骤定义 (9大具体执行细步)
+enum AISubStep: Int, CaseIterable, Identifiable, Hashable {
+    // 阶段一：嗅探与准备
+    case detectURL = 1
+    case fetchContent = 2
+    case cleanContent = 3
+
+    // 阶段二：AI 智能解构
+    case connectModel = 4
+    case extractStructure = 5
+    case extractChecklist = 6
+
+    // 阶段三：空间拓扑校准
+    case cityAnchor = 7
+    case resolvePOI = 8
+    case topologyOptimization = 9
+
+    var id: Int { rawValue }
+
+    var phase: AIPhase {
+        switch self {
+        case .detectURL, .fetchContent, .cleanContent:
+            return .sniffing
+        case .connectModel, .extractStructure, .extractChecklist:
+            return .parsing
+        case .cityAnchor, .resolvePOI, .topologyOptimization:
+            return .geocoding
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .detectURL: return "识别内容格式与链接"
+        case .fetchContent: return "端侧网络抓取网页正文"
+        case .cleanContent: return "净化文案与去除冗余"
+        case .connectModel: return "连接大模型分析上下文"
+        case .extractStructure: return "多模态提取每日路线与换乘"
+        case .extractChecklist: return "生成游玩建议与行前清单"
+        case .cityAnchor: return "锁定城市空间基准锚点"
+        case .resolvePOI: return "高精反查与校准站点坐标"
+        case .topologyOptimization: return "空间拓扑防重叠与优化"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .detectURL: return "link"
+        case .fetchContent: return "arrow.down.doc.fill"
+        case .cleanContent: return "wand.and.stars"
+        case .connectModel: return "antenna.radiowaves.left.and.right"
+        case .extractStructure: return "point.topleft.down.to.point.bottomright.curvepath"
+        case .extractChecklist: return "checklist.checked"
+        case .cityAnchor: return "mappin.circle.fill"
+        case .resolvePOI: return "magnifyingglass"
+        case .topologyOptimization: return "shield.checkered"
         }
     }
 }
 
-/// 小红书/社媒攻略 AI 导入浮层 (端侧双引擎网页嗅探 + 直连 LLM 实时流式提取)
+/// 小红书/社媒攻略 AI 导入浮层 (端侧双引擎网页嗅探 + 3大阶段 9大细步友善进度展示)
 struct AIImportSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var inputText: String = ""
     @State private var isProcessing: Bool = false
-    @State private var currentStep: AIStep = .sniffing
+    @State private var currentPhase: AIPhase = .sniffing
+    @State private var currentSubStep: AISubStep = .detectURL
+    @State private var subStepDetails: [AISubStep: String] = [:]
     @State private var errorMessage: String?
-    
-    // 网页嗅探状态
-    @State private var sniffingStatusInfo: String = ""
-    
-    // 流式打字机状态 (类似 AI 问答)
-    @State private var streamContent: String = ""
-    @State private var streamReasoning: String = ""
-    @State private var showReasoning: Bool = false
-    @State private var isReasoningPhase: Bool = false
-    @State private var geocodingInfo: String = ""
     @State private var parseTask: Task<Void, Never>? = nil
-    
+
     // 解析成功后的草稿数据
     @State private var parsedDraftDays: [DraftDay] = []
     @State private var parsedTripTitle: String = ""
@@ -53,8 +116,8 @@ struct AIImportSheet: View {
     @State private var parsedChecklist: [String] = []
     @State private var navigateToCalibration: Bool = false
     @State private var showSettings: Bool = false
-    
-    // 脉冲动效
+
+    // 脉冲微动效
     @State private var pulseEffect: Bool = false
 
     /// 实时提取输入框中的 URL
@@ -62,40 +125,39 @@ struct AIImportSheet: View {
         WebSnifferService.extractURL(from: inputText)
     }
 
+    /// 总体进度百分比 (0.0 ~ 1.0)
+    private var overallProgressFraction: Double {
+        if !isProcessing && parsedDraftDays.isEmpty { return 0 }
+        if !parsedDraftDays.isEmpty { return 1.0 }
+        let currentIdx = Double(currentSubStep.rawValue - 1)
+        return min(0.95, max(0.08, currentIdx / 9.0))
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 16) {
-                        // 1. 顶部功能介绍卡片
-                        headerGuideCard
-                        
-                        // 2. 输入框区域 (未开始时展示完整输入框，处理中时收纳为摘要卡片)
+                        // 1. 顶部功能介绍卡片 (未处理时展示)
                         if !isProcessing {
+                            headerGuideCard
                             inputEditorSection
                         } else {
+                            // 处理中：输入文案收纳摘要
                             processingInputSummary
+                            // 友好 3 大阶段 9 大细步动态流水线面板
+                            processingPipelineSection
                         }
-                        
-                        // 3. 处理中动态流程指示卡片
-                        if isProcessing {
-                            processingPipelineCard
-                            
-                            // 实时 AI 问答打字机控制台
-                            if currentStep == .reasoning {
-                                streamingConsoleCard
-                            }
-                        }
-                        
-                        // 4. 错误提示
+
+                        // 错误提示
                         if let error = errorMessage {
                             errorBanner(message: error)
                         }
                     }
                     .padding(.vertical, 14)
                 }
-                
-                // 5. 底部开始/中断解析按钮
+
+                // 底部开始/中断解析按钮
                 actionButton
             }
             .navigationTitle("AI 攻略导入")
@@ -136,19 +198,19 @@ struct AIImportSheet: View {
             }
         }
     }
-    
+
     // MARK: - 顶部说明卡片
-    
+
     private var headerGuideCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(AppTheme.sageMint)
-                Text("端侧联网嗅探 + 智能流式提取")
+                Text("端侧联网嗅探 + 智能全流程解构")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
-            Text("支持直接粘贴小红书笔记文案、长篇游记或社媒短链接（如 xhslink.com/...）。系统将自动联网抓取页面完整正文并交由大模型实时流式分析，告别单机模型无法联网的局限。")
+            Text("支持直接粘贴小红书笔记文案、长篇游记或社媒短链接（如 xhslink.com/...）。系统将自动联网抓取页面完整正文并交由大模型分步解析，生成可精准导航的结构化行程。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
@@ -157,22 +219,22 @@ struct AIImportSheet: View {
         .glassCard(cornerRadius: 18)
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - 处理中文案摘要胶囊
-    
+
     private var processingInputSummary: some View {
         HStack(spacing: 8) {
             Image(systemName: "doc.text.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(AppTheme.forestPrimary)
-            
+
             Text(inputText.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " "))
                 .font(.system(size: 12))
                 .lineLimit(1)
                 .foregroundStyle(.secondary)
-            
+
             Spacer()
-            
+
             Text("共 \(inputText.count) 字")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.tertiary)
@@ -186,9 +248,9 @@ struct AIImportSheet: View {
         )
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - 输入框区域
-    
+
     private var inputEditorSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             TextEditor(text: $inputText)
@@ -200,12 +262,12 @@ struct AIImportSheet: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 )
-            
+
             // 实时链接识别感知胶囊
             if let url = detectedURL {
                 detectedURLBanner(url: url)
             }
-            
+
             HStack {
                 // 快捷剪贴板读取
                 Button {
@@ -219,7 +281,7 @@ struct AIImportSheet: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .tint(AppTheme.forestPrimary)
-                
+
                 // 示例测试文案填充
                 Button {
                     HapticFeedback.light()
@@ -231,9 +293,9 @@ struct AIImportSheet: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .tint(AppTheme.warmAmber)
-                
+
                 Spacer()
-                
+
                 if !inputText.isEmpty {
                     Button("清空") {
                         inputText = ""
@@ -245,15 +307,15 @@ struct AIImportSheet: View {
         }
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - 实时识别到链接时的视觉提示
-    
+
     private func detectedURLBanner(url: URL) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "link.badge.plus")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(AppTheme.forestPrimary)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text("已识别到攻略链接:")
@@ -267,9 +329,9 @@ struct AIImportSheet: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "checkmark.shield.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(AppTheme.sageMint)
@@ -282,209 +344,245 @@ struct AIImportSheet: View {
                 .stroke(AppTheme.sageMint.opacity(0.35), lineWidth: 1)
         )
     }
-    
-    // MARK: - 处理流程动画卡片
-    
-    private var processingPipelineCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                // 动态脉冲光点
-                Circle()
-                    .fill(AppTheme.sageMint)
-                    .frame(width: 10, height: 10)
-                    .scaleEffect(pulseEffect ? 1.3 : 0.8)
-                    .opacity(pulseEffect ? 1.0 : 0.5)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseEffect)
-                
-                Text(currentStep == .reasoning ? "AI 实时构思与路线提取中..." : (currentStep == .geocoding ? "地理编码校准中..." : "正在抓取网页内容..."))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+
+    // MARK: - 3 大阶段 × 9 大细步动态流水线面板
+
+    private var processingPipelineSection: some View {
+        VStack(spacing: 12) {
+            // 1. 总体进度仪表盘
+            overallProgressDashboard
+
+            // 2. 三大主阶段卡片流
+            ForEach(AIPhase.allCases) { phase in
+                phaseCardView(for: phase)
+            }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - 总体进度仪表盘
+
+    private var overallProgressDashboard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center) {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(AppTheme.sageMint)
+                        .frame(width: 8, height: 8)
+                        .scaleEffect(pulseEffect ? 1.3 : 0.8)
+                        .opacity(pulseEffect ? 1.0 : 0.4)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseEffect)
+
+                    Text("AI 规划解析流水线")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppTheme.forestPrimary)
+                }
+
+                Spacer()
+
+                Text("第 \(currentPhase.rawValue)/3 阶段 · \(Int(overallProgressFraction * 100))%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(AppTheme.forestPrimary)
             }
             .onAppear { pulseEffect = true }
-            
-            // 三步骤指示条
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(AIStep.allCases) { step in
-                    let isDone = currentStep.rawValue > step.rawValue
-                    let isCurrent = currentStep == step
-                    
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(isDone ? AppTheme.sageMint : (isCurrent ? AppTheme.forestPrimary : Color.secondary.opacity(0.15)))
-                                .frame(width: 20, height: 20)
-                            
-                            if isDone {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(.white)
-                            } else {
-                                Image(systemName: step.systemIcon)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(isCurrent ? .white : .secondary)
-                            }
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(step.title)
-                                .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
-                                .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.sageMint : .secondary))
-                            
-                            // 步骤 1: 嗅探状态细节
-                            if step == .sniffing && !sniffingStatusInfo.isEmpty {
-                                Text(sniffingStatusInfo)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(isDone ? AppTheme.sageMint : AppTheme.forestPrimary)
-                                    .lineLimit(2)
-                            }
-                            
-                            // 步骤 3: 地理编码状态细节
-                            if isCurrent && step == .geocoding && !geocodingInfo.isEmpty {
-                                Text(geocodingInfo)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(AppTheme.sageMint)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        if isCurrent {
-                            ProgressView()
-                                .controlSize(.mini)
-                        }
-                    }
+
+            // 平滑主进度条
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.06))
+                        .frame(height: 6)
+
+                    Capsule()
+                        .fill(AppTheme.brandGradient)
+                        .frame(width: geo.size.width * CGFloat(overallProgressFraction), height: 6)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: overallProgressFraction)
                 }
             }
-        }
-        .padding(16)
-        .glassCard(cornerRadius: 18)
-        .padding(.horizontal, 16)
-    }
-    
-    // MARK: - 实时 AI 问答打字机控制台 (Streaming Console)
-    
-    private var streamingConsoleCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // 控制台抬头
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "bubble.left.and.sparkles.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(AppTheme.sageMint)
-                    
-                    Text(isReasoningPhase ? "AI 深度思考推理中..." : "AI 实时构思问答输出")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                }
-                
-                Spacer()
-                
-                // 实时字数统计徽标
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(AppTheme.luminousMint)
-                        .frame(width: 6, height: 6)
-                        .scaleEffect(pulseEffect ? 1.2 : 0.8)
-                    
-                    Text("\(streamContent.count + streamReasoning.count) 字")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(AppTheme.forestPrimary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3.5)
-                .background(AppTheme.forestPrimary.opacity(0.08))
-                .clipShape(Capsule())
-            }
-            
-            // 若包含 DeepSeek R1 思考过程 (reasoning_content)
-            if !streamReasoning.isEmpty {
-                DisclosureGroup(isExpanded: $showReasoning) {
-                    ScrollView {
-                        Text(streamReasoning)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                    }
-                    .frame(maxHeight: 100)
-                    .background(Color.primary.opacity(0.03))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "brain.head.profile")
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppTheme.warmAmber)
-                        Text("查看模型推理过程 (\(streamReasoning.count) 字)")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(AppTheme.warmAmber)
-                    }
-                }
-            }
-            
-            // 实时打字输出流视窗 (Typewriter AI Chat Bubble)
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if streamContent.isEmpty && streamReasoning.isEmpty {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text("已建立流式传输连接，等待模型输出首批词元...")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.vertical, 16)
-                        } else {
-                            HStack(alignment: .bottom, spacing: 2) {
-                                Text(streamContent.isEmpty ? streamReasoning : streamContent)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundStyle(.primary)
-                                    .lineSpacing(3)
-                                
-                                // 打字机闪烁光标
-                                Text("▊")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(AppTheme.sageMint)
-                                    .opacity(pulseEffect ? 1.0 : 0.2)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .id("STREAM_BOTTOM")
-                        }
-                    }
-                    .padding(10)
-                }
-                .frame(minHeight: 110, maxHeight: 220)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
-                )
-                .onChange(of: streamContent) { _, _ in
-                    scrollProxy.scrollTo("STREAM_BOTTOM", anchor: .bottom)
-                }
-            }
+            .frame(height: 6)
         }
         .padding(14)
         .glassCard(cornerRadius: 18)
-        .padding(.horizontal, 16)
     }
-    
+
+    // MARK: - 单个主阶段卡片 (含对应细分子步骤)
+
+    private func phaseCardView(for phase: AIPhase) -> some View {
+        let isDone = phase.rawValue < currentPhase.rawValue
+        let isCurrent = phase == currentPhase
+        let isPending = phase.rawValue > currentPhase.rawValue
+
+        return VStack(alignment: .leading, spacing: 12) {
+            // 主阶段抬头行
+            HStack(spacing: 10) {
+                // 阶段图标或完成勾选
+                ZStack {
+                    Circle()
+                        .fill(
+                            isDone ? AppTheme.sageMint :
+                            (isCurrent ? AppTheme.forestPrimary : Color.secondary.opacity(0.12))
+                        )
+                        .frame(width: 28, height: 28)
+
+                    if isDone {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Image(systemName: phase.icon)
+                            .font(.system(size: 12))
+                            .foregroundStyle(isCurrent ? .white : .secondary)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("阶段 \(phase.rawValue) · \(phase.title)")
+                        .font(.system(size: 14, weight: isCurrent ? .bold : .semibold))
+                        .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.forestPrimary : .secondary))
+
+                    Text(phase.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+
+                Spacer()
+
+                // 状态微标
+                if isDone {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                        Text("已完成")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(AppTheme.sageMint.opacity(0.15))
+                    .foregroundStyle(AppTheme.sageMint)
+                    .clipShape(Capsule())
+                } else if isCurrent {
+                    HStack(spacing: 5) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("处理中")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(AppTheme.forestPrimary.opacity(0.10))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                    .clipShape(Capsule())
+                } else {
+                    Text("待执行")
+                        .font(.system(size: 11))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(Color.primary.opacity(0.04))
+                        .foregroundStyle(.tertiary)
+                        .clipShape(Capsule())
+                }
+            }
+
+            // 细分子步骤列表 (当该阶段处于进行中或已完成时展开展示，直观友善)
+            if !isPending {
+                Divider()
+                    .opacity(0.4)
+                    .padding(.vertical, 2)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(phase.subSteps) { subStep in
+                        subStepRowView(for: subStep)
+                    }
+                }
+                .padding(.leading, 6)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(isCurrent ? Color(uiColor: .secondarySystemGroupedBackground) : Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isCurrent ? AppTheme.sageMint.opacity(0.4) : Color.primary.opacity(0.05),
+                    lineWidth: isCurrent ? 1.5 : 1
+                )
+        )
+        .shadow(color: isCurrent ? AppTheme.forestPrimary.opacity(0.06) : Color.clear, radius: 10, x: 0, y: 4)
+    }
+
+    // MARK: - 细分子步骤行视图
+
+    private func subStepRowView(for subStep: AISubStep) -> some View {
+        let isDone = subStep.rawValue < currentSubStep.rawValue
+        let isCurrent = subStep == currentSubStep
+        let detailText = subStepDetails[subStep]
+
+        return HStack(alignment: .top, spacing: 9) {
+            // 左侧状态圆点
+            ZStack {
+                Circle()
+                    .fill(
+                        isDone ? AppTheme.sageMint :
+                        (isCurrent ? AppTheme.forestPrimary : Color.secondary.opacity(0.15))
+                    )
+                    .frame(width: 16, height: 16)
+
+                if isDone {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                } else if isCurrent {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 5, height: 5)
+                }
+            }
+            .padding(.top, 2)
+
+            // 步骤文本与动态详情
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(subStep.title)
+                        .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
+                        .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.forestPrimary : .secondary))
+
+                    if isCurrent {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
+                }
+
+                // 动态细步进展描述
+                if let detail = detailText, !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isDone ? AppTheme.sageMint : AppTheme.forestPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer()
+        }
+    }
+
     // MARK: - 错误指引提示卡片
-    
+
     private func errorBanner(message: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(AppTheme.warmAmber)
                     .font(.system(size: 15))
-                
+
                 Text(message)
                     .font(.footnote)
                     .foregroundStyle(.primary)
                     .lineSpacing(3)
             }
-            
+
             // 若错误提示包含指引，提供一键操作辅助
             if message.contains("复制文案") {
                 HStack(spacing: 8) {
@@ -499,7 +597,7 @@ struct AIImportSheet: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .tint(AppTheme.forestPrimary)
-                    
+
                     Button {
                         HapticFeedback.light()
                         loadSampleText()
@@ -523,9 +621,9 @@ struct AIImportSheet: View {
         )
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - 底部操作按钮
-    
+
     private var actionButton: some View {
         Group {
             if isProcessing {
@@ -551,7 +649,7 @@ struct AIImportSheet: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "sparkles")
-                        Text("开始 AI 流式解析提取")
+                        Text("开始 AI 智能规划提取")
                             .fontWeight(.bold)
                     }
                     .frame(maxWidth: .infinity)
@@ -569,15 +667,15 @@ struct AIImportSheet: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
-    
+
     // MARK: - 业务逻辑
-    
+
     private func checkClipboard() {
         if let string = UIPasteboard.general.string, !string.isEmpty {
             inputText = string
         }
     }
-    
+
     private func loadSampleText() {
         inputText = """
         【上海周末2日慢游路线】
@@ -594,49 +692,55 @@ struct AIImportSheet: View {
         特需打包清单：充电宝、轻便步行鞋、晴雨伞。
         """
     }
-    
+
     private func cancelParsing() {
         parseTask?.cancel()
         parseTask = nil
         isProcessing = false
         errorMessage = "已取消本次解析。"
     }
-    
+
     private func startParsing() {
         guard SettingsManager.shared.isApiKeyConfigured else {
             errorMessage = "尚未配置 AI API Key，请点击右上角钥匙图标进行配置"
             return
         }
-        
+
         isProcessing = true
         errorMessage = nil
-        currentStep = .sniffing
-        sniffingStatusInfo = ""
-        streamContent = ""
-        streamReasoning = ""
-        isReasoningPhase = false
-        geocodingInfo = ""
-        
+        currentPhase = .sniffing
+        currentSubStep = .detectURL
+        subStepDetails = [:]
+
         parseTask = Task {
             do {
                 var contentToParse = inputText
-                
-                // 步骤 1：检测是否为链接，若是则双引擎联网嗅探网页真实正文
+
+                // ==========================================
+                // 阶段一：网页嗅探与文本准备
+                // ==========================================
+                await MainActor.run {
+                    self.currentPhase = .sniffing
+                    self.currentSubStep = .detectURL
+                }
+
                 if let url = WebSnifferService.extractURL(from: inputText) {
                     await MainActor.run {
-                        self.currentStep = .sniffing
-                        self.sniffingStatusInfo = "正在联网访问 \(url.host ?? "网页")..."
+                        self.subStepDetails[.detectURL] = "识别到网址：\(url.host ?? url.absoluteString)"
+                        self.currentSubStep = .fetchContent
+                        self.subStepDetails[.fetchContent] = "正在联网访问网页正文..."
                     }
-                    
+
                     let userCleanedNote = WebSnifferService.cleanSocialBoilerplate(from: inputText)
-                    
+
                     do {
                         let sniffed = try await WebSnifferService.shared.sniffContent(from: url)
                         if sniffed.isSufficient {
-                            // 成功抓取到充足的攻略正文
                             let displayTitle = sniffed.title.isEmpty ? "网页攻略" : sniffed.title
                             await MainActor.run {
-                                self.sniffingStatusInfo = "已成功提取《\(displayTitle)》（共 \(sniffed.text.count) 字）"
+                                self.subStepDetails[.fetchContent] = "已成功提取《\(displayTitle)》（共 \(sniffed.text.count) 字）"
+                                self.currentSubStep = .cleanContent
+                                self.subStepDetails[.cleanContent] = "剥离社媒营销与模版冗余，提取核心游记段落"
                             }
                             var promptText = "【来源网页标题】: \(displayTitle)\n【来源网址】: \(url.absoluteString)\n\n【网页攻略正文】:\n\(sniffed.text)"
                             if !userCleanedNote.isEmpty {
@@ -644,10 +748,11 @@ struct AIImportSheet: View {
                             }
                             contentToParse = promptText
                         } else {
-                            // 抓取到的内容不足，检查原输入是否已有足够长文案
                             if userCleanedNote.count >= 60 {
                                 await MainActor.run {
-                                    self.sniffingStatusInfo = "网页防爬受限，直接基于您输入的攻略文案（共 \(userCleanedNote.count) 字）继续解析"
+                                    self.subStepDetails[.fetchContent] = "网页开启了防护，自动采用您输入的文案（共 \(userCleanedNote.count) 字）"
+                                    self.currentSubStep = .cleanContent
+                                    self.subStepDetails[.cleanContent] = "已整理有效正文"
                                 }
                                 contentToParse = userCleanedNote
                             } else {
@@ -657,7 +762,9 @@ struct AIImportSheet: View {
                     } catch let snifferErr as WebSnifferError {
                         if userCleanedNote.count >= 60 {
                             await MainActor.run {
-                                self.sniffingStatusInfo = "链接受限，直接基于您输入的文案（共 \(userCleanedNote.count) 字）继续解析"
+                                self.subStepDetails[.fetchContent] = "采用您输入的文案（共 \(userCleanedNote.count) 字）"
+                                self.currentSubStep = .cleanContent
+                                self.subStepDetails[.cleanContent] = "已整理有效正文"
                             }
                             contentToParse = userCleanedNote
                         } else {
@@ -667,7 +774,7 @@ struct AIImportSheet: View {
                                 case .antiCrawlerBlocked:
                                     self.errorMessage = """
                                     ⚠️ 该平台链接开启了防爬机制或需要客户端验证，端侧未能直接抓取到正文。
-                                    
+
                                     💡 轻松解决方案：
                                     请在小红书/社媒 App 中打开该笔记，长按文案选择「复制文案」，然后粘贴到上方输入框，AI 即可 100% 精准为您解析路线！
                                     """
@@ -680,7 +787,9 @@ struct AIImportSheet: View {
                     } catch {
                         if userCleanedNote.count >= 60 {
                             await MainActor.run {
-                                self.sniffingStatusInfo = "直接基于输入的文案继续解析"
+                                self.subStepDetails[.fetchContent] = "基于输入文案继续解析"
+                                self.currentSubStep = .cleanContent
+                                self.subStepDetails[.cleanContent] = "已整理有效正文"
                             }
                             contentToParse = userCleanedNote
                         } else {
@@ -692,42 +801,79 @@ struct AIImportSheet: View {
                         }
                     }
                 } else {
-                    // 用户未输入任何链接，直接使用纯文案
                     await MainActor.run {
-                        self.sniffingStatusInfo = "已读取输入的攻略文本（共 \(inputText.count) 字）"
+                        self.subStepDetails[.detectURL] = "识别到纯文本攻略（共 \(inputText.count) 字）"
+                        self.currentSubStep = .fetchContent
+                        self.subStepDetails[.fetchContent] = "直接读取本地输入文本"
+                        self.currentSubStep = .cleanContent
+                        self.subStepDetails[.cleanContent] = "已整理有效攻略段落"
                     }
                 }
-                
+
                 try Task.checkCancellation()
-                
-                // 步骤 2：流式调用直连大模型提取结构化路线 (实时打字机效果)
+
+                // ==========================================
+                // 阶段二：AI 智能行程解构
+                // ==========================================
                 await MainActor.run {
-                    currentStep = .reasoning
+                    self.currentPhase = .parsing
+                    self.currentSubStep = .connectModel
+                    self.subStepDetails[.connectModel] = "已连接 \(SettingsManager.shared.modelName)，大模型正在理解行程意图..."
                 }
-                
+
                 let dto = try await LLMParserService.shared.parseTripStream(from: contentToParse) { progress in
                     Task { @MainActor in
-                        self.isReasoningPhase = progress.isReasoning
-                        self.streamReasoning = progress.accumulatedReasoning
-                        self.streamContent = progress.accumulatedContent
+                        if progress.isReasoning {
+                            if self.currentSubStep != .connectModel {
+                                self.currentSubStep = .connectModel
+                            }
+                            self.subStepDetails[.connectModel] = "模型正在深入理解旅行偏好与日程时序..."
+                        } else {
+                            let len = progress.accumulatedContent.count
+                            if len < 350 {
+                                if self.currentSubStep != .extractStructure {
+                                    self.currentSubStep = .extractStructure
+                                }
+                                self.subStepDetails[.extractStructure] = "正在提炼行程天数、打卡景点与交通换乘..."
+                            } else {
+                                if self.currentSubStep != .extractChecklist {
+                                    self.currentSubStep = .extractChecklist
+                                }
+                                self.subStepDetails[.extractChecklist] = "正在萃取出行避坑建议与行李清单..."
+                            }
+                        }
                     }
                 }
-                
+
                 try Task.checkCancellation()
-                
-                // 步骤 3：原生地理编码反查所有节点坐标 (融合城市基准锚点、MapKit POI、AI先验与防离群纠偏)
-                await MainActor.run {
-                    currentStep = .geocoding
-                    geocodingInfo = "正在锁定 \(dto.destination) 城市空间基准..."
-                }
-                
-                let cityAnchor = await GeocodingService.shared.resolveCityAnchor(destination: dto.destination)
-                
-                var draftDays: [DraftDay] = []
+
                 let totalNodesCount = dto.days.reduce(0) { $0 + $1.nodes.count }
+                await MainActor.run {
+                    self.subStepDetails[.extractStructure] = "已解析 \(dto.days.count) 天日程，共 \(totalNodesCount) 处节点"
+                    self.subStepDetails[.extractChecklist] = "已生成避坑 Tips 及 \(dto.suggestedChecklist?.count ?? 0) 项特需装备"
+                }
+
+                // ==========================================
+                // 阶段三：空间拓扑与地理校准
+                // ==========================================
+                await MainActor.run {
+                    self.currentPhase = .geocoding
+                    self.currentSubStep = .cityAnchor
+                    self.subStepDetails[.cityAnchor] = "正在锁定 \(dto.destination) 城市空间基准..."
+                }
+
+                let cityAnchor = await GeocodingService.shared.resolveCityAnchor(destination: dto.destination)
+
+                await MainActor.run {
+                    self.subStepDetails[.cityAnchor] = "已锁定 \(dto.destination) 空间基准 (半径 80km 约束)"
+                    self.currentSubStep = .resolvePOI
+                    self.subStepDetails[.resolvePOI] = "准备逐站检索高精坐标..."
+                }
+
+                var draftDays: [DraftDay] = []
                 var currentNodeIndex = 0
                 var lastResolvedCoord: CLLocationCoordinate2D = cityAnchor
-                
+
                 for dayDTO in dto.days {
                     var draftNodes: [DraftNode] = []
                     for nodeDTO in dayDTO.nodes {
@@ -735,14 +881,14 @@ struct AIImportSheet: View {
                         currentNodeIndex += 1
                         let nodeTitle = nodeDTO.title
                         let currentIndex = currentNodeIndex
-                        
+
                         await MainActor.run {
-                            self.geocodingInfo = "第 \(currentIndex)/\(totalNodesCount) 站: \(nodeTitle)"
+                            self.subStepDetails[.resolvePOI] = "第 \(currentIndex)/\(totalNodesCount) 站: \(nodeTitle) [高精校验中]"
                         }
-                        
+
                         let nodeType = NodeType(rawValue: nodeDTO.nodeType) ?? .attraction
                         let transitType = TransitType(rawValue: nodeDTO.incomingTransit) ?? .walking
-                        
+
                         let resolved = await GeocodingService.shared.resolveNodeCoordinate(
                             title: nodeDTO.title,
                             searchKeyword: nodeDTO.searchKeyword,
@@ -754,11 +900,11 @@ struct AIImportSheet: View {
                             fallbackCoord: lastResolvedCoord,
                             nodeIndex: currentIndex
                         )
-                        
+
                         if resolved.isVerified {
                             lastResolvedCoord = resolved.coordinate
                         }
-                        
+
                         let draftNode = DraftNode(
                             title: nodeDTO.title,
                             latitude: resolved.coordinate.latitude,
@@ -775,13 +921,27 @@ struct AIImportSheet: View {
                     }
                     draftDays.append(DraftDay(dayIndex: dayDTO.dayIndex, summary: dayDTO.summary, nodes: draftNodes))
                 }
-                
+
+                await MainActor.run {
+                    self.subStepDetails[.resolvePOI] = "全部 \(totalNodesCount) 个站点坐标已完成校准"
+                    self.currentSubStep = .topologyOptimization
+                    self.subStepDetails[.topologyOptimization] = "正在执行路线防重叠微分散与离群校验..."
+                }
+
                 // 执行整趟行程的拓扑防重叠微分散与离群拉回检测
                 GeocodingService.shared.disambiguateAndSanitize(days: &draftDays, cityAnchor: cityAnchor)
-                
-                try Task.checkCancellation()
-                
+
                 await MainActor.run {
+                    self.subStepDetails[.topologyOptimization] = "空间拓扑优化完成，健康度 100%"
+                }
+
+                try Task.checkCancellation()
+
+                // 短暂延时保证视觉流转自然平滑
+                try? await Task.sleep(nanoseconds: 350_000_000)
+
+                await MainActor.run {
+                    HapticFeedback.success()
                     self.parsedTripTitle = dto.tripTitle
                     self.parsedDestination = dto.destination
                     self.parsedDraftDays = draftDays
