@@ -13,6 +13,7 @@ struct TripDetailMapView: View {
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var sheetDetent: PresentationDetent = .height(220)
     @State private var showAddNodeSheet = false
+    @State private var isSheetPresented = false
     
     private var currentDay: TripDay? {
         trip.days.first(where: { $0.dayIndex == selectedDayIndex })
@@ -68,19 +69,26 @@ struct TripDetailMapView: View {
             }
             .onAppear {
                 focusAllDayNodes()
+                if !isSheetPresented {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        isSheetPresented = true
+                    }
+                }
             }
             .onChange(of: selectedDayIndex) { _, _ in
                 focusAllDayNodes()
             }
             
-            // 2. 顶部悬浮控制岛 (全景视角聚焦与天数微标)
+            // 2. 顶部悬浮控制岛 (返回导航、全景视角聚焦与天数微标)
             topFloatingBar
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         // 上拉抽屉联动
-        .sheet(isPresented: .constant(true)) {
+        .sheet(isPresented: $isSheetPresented) {
             TripDayTimelineSheet(
                 trip: trip,
                 selectedDayIndex: $selectedDayIndex,
@@ -106,7 +114,26 @@ struct TripDetailMapView: View {
     // MARK: - 顶部悬浮控制岛
     
     private var topFloatingBar: some View {
-        HStack {
+        HStack(spacing: 8) {
+            // 返回按钮 (触发缩放回缩与触感微震)
+            Button {
+                HapticFeedback.light()
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
+            }
+            .buttonStyle(.plain)
+            
             // 当前天数与路线标题胶囊
             HStack(spacing: 6) {
                 Circle()
