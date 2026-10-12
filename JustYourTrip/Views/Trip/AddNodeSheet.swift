@@ -194,6 +194,7 @@ struct AddNodeSheet: View {
 struct EditNodeSheet: View {
     @Bindable var node: RouteNode
     var destination: String = ""
+    var allDays: [TripDay] = []
     var onDelete: (() -> Void)? = nil
     
     @Environment(\.dismiss) private var dismiss
@@ -212,10 +213,12 @@ struct EditNodeSheet: View {
     @State private var geocodeError: String?
     @State private var showMapPicker: Bool = false
     @State private var showDeleteConfirmation: Bool = false
+    @State private var selectedDayId: UUID = UUID()
     
-    init(node: RouteNode, destination: String = "", onDelete: (() -> Void)? = nil) {
+    init(node: RouteNode, destination: String = "", allDays: [TripDay] = [], onDelete: (() -> Void)? = nil) {
         self.node = node
         self.destination = destination
+        self.allDays = allDays
         self.onDelete = onDelete
         _title = State(initialValue: node.title)
         _nodeType = State(initialValue: node.nodeType)
@@ -225,11 +228,22 @@ struct EditNodeSheet: View {
         _durationMinutes = State(initialValue: node.suggestedDurationMinutes)
         _latitudeString = State(initialValue: String(format: "%.6f", node.latitude))
         _longitudeString = State(initialValue: String(format: "%.6f", node.longitude))
+        _selectedDayId = State(initialValue: node.day?.id ?? UUID())
     }
     
     var body: some View {
         NavigationStack {
             Form {
+                if allDays.count > 1 {
+                    Section("所属天数日程") {
+                        Picker("游玩日期", selection: $selectedDayId) {
+                            ForEach(allDays.sorted(by: { $0.dayIndex < $1.dayIndex })) { d in
+                                Text("Day \(d.dayIndex) (\(d.date.formatted(.dateTime.month().day())))").tag(d.id)
+                            }
+                        }
+                    }
+                }
+
                 Section("地点基础信息") {
                     HStack {
                         TextField("地点/车站/餐厅名称", text: $title)
@@ -320,7 +334,7 @@ struct EditNodeSheet: View {
                         .lineLimit(2...4)
                 }
                 
-                if let onDelete = onDelete {
+                if onDelete != nil {
                     Section {
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
@@ -417,9 +431,142 @@ struct EditNodeSheet: View {
         node.latitude = lat
         node.longitude = lon
         
+        // 若跨天变更日程
+        if let currentDay = node.day, currentDay.id != selectedDayId,
+           let targetDay = allDays.first(where: { $0.id == selectedDayId }) {
+            currentDay.nodes.removeAll(where: { $0.id == node.id })
+            node.day = targetDay
+            node.sortOrder = targetDay.nodes.count
+            targetDay.nodes.append(node)
+            for (idx, n) in currentDay.sortedNodes.enumerated() { n.sortOrder = idx }
+            for (idx, n) in targetDay.sortedNodes.enumerated() { n.sortOrder = idx }
+        }
+        
         HapticFeedback.success()
         try? modelContext.save()
         dismiss()
+    }
+}
+
+// MARK: - 站点全景拖拽调序弹窗 (ReorderNodesSheet)
+
+struct ReorderNodesSheet: View {
+    @Bindable var day: TripDay
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var workingNodes: [RouteNode] = []
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // 提示小横幅
+                HStack(spacing: 8) {
+                    Image(systemName: "hand.draw")
+                        .font(.system(size: 13))
+                        .foregroundStyle(AppTheme.forestPrimary)
+                    Text("按住右侧三横线滑块上下拖拽，即可调整游玩先后次序")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(AppTheme.forestPrimary.opacity(0.06))
+                
+                List {
+                    ForEach(Array(workingNodes.enumerated()), id: \.element.id) { index, node in
+                        HStack(spacing: 12) {
+                            // 序号指示球
+                            Text("\(index + 1)")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(AppTheme.forestPrimary)
+                                .clipShape(Circle())
+                            
+                            // 地点类型图标
+                            Image(systemName: node.nodeType.systemIcon)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(badgeColor(for: node.nodeType))
+                                .frame(width: 20)
+                            
+                            // 地点标题与交通
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(node.title)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.primary)
+                                    .lineLimit(1)
+                                
+                                if !node.incomingTransitGuide.isEmpty {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: node.incomingTransit.systemIcon)
+                                            .font(.system(size: 9))
+                                        Text(node.incomingTransitGuide)
+                                            .font(.system(size: 11))
+                                    }
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if node.suggestedDurationMinutes > 0 {
+                                Text("\(node.suggestedDurationMinutes)m")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 3)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    }
+                    .onMove { fromIndices, toOffset in
+                        workingNodes.move(fromOffsets: fromIndices, toOffset: toOffset)
+                        for (idx, n) in workingNodes.enumerated() {
+                            n.sortOrder = idx
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .environment(\.editMode, .constant(.active))
+            }
+            .navigationTitle("调整 Day \(day.dayIndex) 站点顺序")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") {
+                        saveReorder()
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                }
+            }
+            .onAppear {
+                workingNodes = day.sortedNodes
+            }
+        }
+    }
+    
+    private func saveReorder() {
+        HapticFeedback.success()
+        for (idx, n) in workingNodes.enumerated() {
+            n.sortOrder = idx
+        }
+        try? modelContext.save()
+        dismiss()
+    }
+    
+    private func badgeColor(for type: NodeType) -> Color {
+        switch type {
+        case .attraction: return AppTheme.sunsetCoral
+        case .restaurant: return AppTheme.warmAmber
+        case .hotel: return AppTheme.royalPurple
+        case .transitBus: return AppTheme.skyTeal
+        case .transitSub: return AppTheme.indigoPrimary
+        case .parkingLot: return Color.brown
+        case .other: return Color.gray
+        }
     }
 }
 

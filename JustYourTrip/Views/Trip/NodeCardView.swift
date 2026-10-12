@@ -11,6 +11,10 @@ struct NodeCardView: View {
     var onNavigate: () -> Void
     var onEdit: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
+    var onMoveUp: (() -> Void)? = nil
+    var onMoveDown: (() -> Void)? = nil
+    var otherDays: [TripDay] = []
+    var onMoveToDay: ((TripDay) -> Void)? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -174,8 +178,8 @@ struct NodeCardView: View {
                     .clipShape(Capsule())
                 }
                 
-                // 更多操作菜单 (编辑 / 删除)
-                if onEdit != nil || onDelete != nil {
+                // 更多操作菜单 (编辑 / 调序 / 跨天 / 删除)
+                if onEdit != nil || onDelete != nil || onMoveUp != nil || onMoveDown != nil || !otherDays.isEmpty {
                     Menu {
                         if let onEdit = onEdit {
                             Button {
@@ -183,6 +187,39 @@ struct NodeCardView: View {
                                 onEdit()
                             } label: {
                                 Label("编辑地点信息", systemImage: "pencil")
+                            }
+                        }
+                        
+                        // 顺序调整操作
+                        if let onMoveUp = onMoveUp, !isFirst {
+                            Button {
+                                HapticFeedback.light()
+                                onMoveUp()
+                            } label: {
+                                Label("上移一位", systemImage: "arrow.up")
+                            }
+                        }
+                        
+                        if let onMoveDown = onMoveDown, !isLast {
+                            Button {
+                                HapticFeedback.light()
+                                onMoveDown()
+                            } label: {
+                                Label("下移一位", systemImage: "arrow.down")
+                            }
+                        }
+                        
+                        // 跨天移动操作
+                        if !otherDays.isEmpty, let onMoveToDay = onMoveToDay {
+                            Menu {
+                                ForEach(otherDays.sorted(by: { $0.dayIndex < $1.dayIndex })) { d in
+                                    Button("移至 Day \(d.dayIndex)") {
+                                        HapticFeedback.light()
+                                        onMoveToDay(d)
+                                    }
+                                }
+                            } label: {
+                                Label("移至其他天...", systemImage: "calendar.badge.plus")
                             }
                         }
                         
@@ -292,6 +329,41 @@ struct NodeCardView: View {
                     Label("编辑地点信息", systemImage: "pencil")
                 }
             }
+            
+            // 顺序调整
+            if let onMoveUp = onMoveUp, !isFirst {
+                Button {
+                    HapticFeedback.light()
+                    onMoveUp()
+                } label: {
+                    Label("上移一位", systemImage: "arrow.up")
+                }
+            }
+            
+            if let onMoveDown = onMoveDown, !isLast {
+                Button {
+                    HapticFeedback.light()
+                    onMoveDown()
+                } label: {
+                    Label("下移一位", systemImage: "arrow.down")
+                }
+            }
+            
+            // 跨天移动
+            if !otherDays.isEmpty, let onMoveToDay = onMoveToDay {
+                Menu {
+                    ForEach(otherDays.sorted(by: { $0.dayIndex < $1.dayIndex })) { d in
+                        Button("移至 Day \(d.dayIndex)") {
+                            HapticFeedback.light()
+                            onMoveToDay(d)
+                        }
+                    }
+                } label: {
+                    Label("移至其他天...", systemImage: "calendar.badge.plus")
+                }
+            }
+            
+            Divider()
             
             Button {
                 HapticFeedback.success()

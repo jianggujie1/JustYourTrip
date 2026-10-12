@@ -60,6 +60,10 @@ struct TripDayTimelineDrawer: View {
     @State private var nodeToDelete: RouteNode?
     @State private var showDeleteConfirmation = false
     @State private var editingNode: RouteNode?
+    
+    @State private var showReorderSheet = false
+    @State private var dayToDelete: TripDay?
+    @State private var showDeleteDayAlert = false
 
     private var currentDay: TripDay? {
         trip.days.first(where: { $0.dayIndex == selectedDayIndex })
@@ -187,10 +191,31 @@ struct TripDayTimelineDrawer: View {
             EditNodeSheet(
                 node: node,
                 destination: trip.destination,
+                allDays: trip.days,
                 onDelete: {
                     deleteNode(node)
                 }
             )
+        }
+        .sheet(isPresented: $showReorderSheet) {
+            if let day = currentDay {
+                ReorderNodesSheet(day: day)
+            }
+        }
+        .confirmationDialog(
+            "删除天数日程",
+            isPresented: $showDeleteDayAlert,
+            titleVisibility: .visible,
+            presenting: dayToDelete
+        ) { day in
+            Button("删除 Day \(day.dayIndex) 及所属地点", role: .destructive) {
+                deleteDay(day)
+            }
+            Button("取消", role: .cancel) {
+                dayToDelete = nil
+            }
+        } message: { day in
+            Text("确定从行程中移除 Day \(day.dayIndex) 吗？该天包含的 \(day.nodes.count) 个地点将被一并删除。")
         }
     }
 
@@ -250,6 +275,27 @@ struct TripDayTimelineDrawer: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+
+                // 调序操作按钮 (多于1站时允许快捷调序)
+                if sortedNodes.count > 1 {
+                    Button {
+                        HapticFeedback.light()
+                        showReorderSheet = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("调序")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Color.primary.opacity(0.06))
+                        .foregroundStyle(Color.primary)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
 
                 // 加节点操作按钮
                 Button {
@@ -330,7 +376,40 @@ struct TripDayTimelineDrawer: View {
                         .shadow(color: isSelected ? AppTheme.sageMint.opacity(0.35) : .clear, radius: 6, x: 0, y: 3)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        if trip.days.count > 1 {
+                            Button(role: .destructive) {
+                                dayToDelete = day
+                                showDeleteDayAlert = true
+                            } label: {
+                                Label("删除 Day \(day.dayIndex)", systemImage: "trash")
+                            }
+                        }
+                    }
                 }
+
+                // 快捷增加天数胶囊
+                Button {
+                    HapticFeedback.light()
+                    addNewDay()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("加一天")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.04))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(AppTheme.forestPrimary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                    )
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -419,6 +498,16 @@ struct TripDayTimelineDrawer: View {
                             onDelete: {
                                 nodeToDelete = node
                                 showDeleteConfirmation = true
+                            },
+                            onMoveUp: {
+                                moveNodeUp(node)
+                            },
+                            onMoveDown: {
+                                moveNodeDown(node)
+                            },
+                            otherDays: trip.days.filter { $0.id != currentDay?.id },
+                            onMoveToDay: { targetDay in
+                                moveNodeToDay(node, targetDay: targetDay)
                             }
                         )
                         .id(node.id)
@@ -486,6 +575,93 @@ struct TripDayTimelineDrawer: View {
             try? modelContext.save()
         }
         nodeToDelete = nil
+    }
+
+    // MARK: - 节点排序与移动逻辑
+    
+    private func moveNodeUp(_ node: RouteNode) {
+        guard let day = currentDay else { return }
+        let nodes = day.sortedNodes
+        guard let idx = nodes.firstIndex(where: { $0.id == node.id }), idx > 0 else { return }
+        HapticFeedback.selection()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+            let prev = nodes[idx - 1]
+            let tempOrder = prev.sortOrder
+            prev.sortOrder = node.sortOrder
+            node.sortOrder = tempOrder
+            try? modelContext.save()
+        }
+    }
+    
+    private func moveNodeDown(_ node: RouteNode) {
+        guard let day = currentDay else { return }
+        let nodes = day.sortedNodes
+        guard let idx = nodes.firstIndex(where: { $0.id == node.id }), idx < nodes.count - 1 else { return }
+        HapticFeedback.selection()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+            let next = nodes[idx + 1]
+            let tempOrder = next.sortOrder
+            next.sortOrder = node.sortOrder
+            node.sortOrder = tempOrder
+            try? modelContext.save()
+        }
+    }
+    
+    private func moveNodeToDay(_ node: RouteNode, targetDay: TripDay) {
+        guard let currentDay = currentDay, currentDay.id != targetDay.id else { return }
+        HapticFeedback.success()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            if selectedNodeId == node.id {
+                selectedNodeId = currentDay.sortedNodes.filter({ $0.id != node.id }).first?.id
+            }
+            currentDay.nodes.removeAll(where: { $0.id == node.id })
+            node.day = targetDay
+            node.sortOrder = targetDay.nodes.count
+            targetDay.nodes.append(node)
+            
+            for (idx, n) in currentDay.sortedNodes.enumerated() { n.sortOrder = idx }
+            for (idx, n) in targetDay.sortedNodes.enumerated() { n.sortOrder = idx }
+            try? modelContext.save()
+        }
+    }
+
+    // MARK: - 天数增删逻辑
+    
+    private func addNewDay() {
+        let nextIndex = (trip.days.map(\.dayIndex).max() ?? 0) + 1
+        let baseDate = trip.days.map(\.date).max() ?? trip.startDate
+        let nextDate = Calendar.current.date(byAdding: .day, value: 1, to: baseDate) ?? Date()
+        let newDay = TripDay(dayIndex: nextIndex, date: nextDate, summary: "")
+        newDay.trip = trip
+        modelContext.insert(newDay)
+        trip.days.append(newDay)
+        try? modelContext.save()
+        HapticFeedback.success()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            selectedDayIndex = nextIndex
+            selectedNodeId = nil
+        }
+    }
+    
+    private func deleteDay(_ day: TripDay) {
+        guard trip.days.count > 1 else { return }
+        HapticFeedback.warning()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            if let idx = trip.days.firstIndex(where: { $0.id == day.id }) {
+                trip.days.remove(at: idx)
+            }
+            modelContext.delete(day)
+            let sorted = trip.days.sorted(by: { $0.dayIndex < $1.dayIndex })
+            for (idx, d) in sorted.enumerated() {
+                d.dayIndex = idx + 1
+            }
+            try? modelContext.save()
+            if selectedDayIndex == day.dayIndex {
+                selectedDayIndex = trip.days.map(\.dayIndex).min() ?? 1
+                selectedNodeId = currentDay?.sortedNodes.first?.id
+            }
+        }
+        dayToDelete = nil
     }
 
     // MARK: - 空状态
