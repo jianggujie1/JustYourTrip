@@ -177,3 +177,15 @@ extension View {
         }
     }
 }
+
+// MARK: - 解决自定义导航返回按钮后边缘侧滑返回手势失效的问题
+extension UINavigationController: @retroactive UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
+    }
+
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        return viewControllers.count > 1
+    }
+}

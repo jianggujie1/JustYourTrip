@@ -1,89 +1,262 @@
 import SwiftUI
 import CoreLocation
+import UIKit
+
+/// 底部联动抽屉档位定义 (折叠态 / 半屏态 / 展开态)
+enum DrawerDetent: CaseIterable, Equatable {
+    case collapsed  // 底部紧凑态：最大化地图视野，露头 peek 首站
+    case medium     // 半屏中档：地图与日程平衡浏览
+    case expanded   // 全屏高档：沉浸式查阅全部节点
+
+    func targetHeight(screenHeight: CGFloat, bottomSafeArea: CGFloat) -> CGFloat {
+        let maxAllowed = max(320, screenHeight - 95)
+        switch self {
+        case .collapsed:
+            // 抓手 + 标题操作栏 + 天数胶囊 + 当日概览 + 首站露头 + 底部安全区
+            return min(210 + bottomSafeArea, maxAllowed * 0.45)
+        case .medium:
+            // 约屏幕高度 48%
+            return min(max(360, screenHeight * 0.48), maxAllowed * 0.75)
+        case .expanded:
+            // 顶部留出约 95pt，保证顶部控制岛（返回、全览）常驻可见并可点
+            return maxAllowed
+        }
+    }
+}
+
+// MARK: - 自定义顶部圆角 Shape
+struct RoundedCornerShape: Shape {
+    var radius: CGFloat = 26
+    var corners: UIRectCorner = [.topLeft, .topRight]
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
+    }
+}
 
 /// 底部联动抽屉：包含天数选择、竖向步进时间轴卡片与导航中继触发
-struct TripDayTimelineSheet: View {
+/// 原生内嵌于 TripDetailMapView 视图树内，随父视图一同转场与返回，彻底告别 modal sheet 异步残留问题
+struct TripDayTimelineDrawer: View {
     @Bindable var trip: TripPlan
     @Binding var selectedDayIndex: Int
     @Binding var selectedNodeId: UUID?
+    @Binding var drawerDetent: DrawerDetent
+    var screenHeight: CGFloat
+    var bottomSafeArea: CGFloat
     var onNodeSelected: (RouteNode) -> Void
     var onAddNode: () -> Void
-    
+
     @State private var navigatingNode: RouteNode?
     @State private var showNavigationDialog = false
-    
+    @State private var dragOffset: CGFloat = 0
+
     private var currentDay: TripDay? {
         trip.days.first(where: { $0.dayIndex == selectedDayIndex })
     }
-    
+
     private var sortedNodes: [RouteNode] {
         currentDay?.sortedNodes ?? []
     }
 
+    private var currentTargetHeight: CGFloat {
+        drawerDetent.targetHeight(screenHeight: screenHeight, bottomSafeArea: bottomSafeArea)
+    }
+
+    private var displayedHeight: CGFloat {
+        let h = currentTargetHeight - dragOffset
+        let minH = DrawerDetent.collapsed.targetHeight(screenHeight: screenHeight, bottomSafeArea: bottomSafeArea)
+        let maxH = DrawerDetent.expanded.targetHeight(screenHeight: screenHeight, bottomSafeArea: bottomSafeArea)
+        if h < minH {
+            return minH - (minH - h) * 0.25
+        } else if h > maxH {
+            return maxH + (h - maxH) * 0.25
+        } else {
+            return h
+        }
+    }
+
+    // MARK: - 抽屉手势拖拽
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 5, coordinateSpace: .global)
+            .onChanged { value in
+                dragOffset = value.translation.height
+            }
+            .onEnded { value in
+                let translation = value.translation.height
+                let velocity = value.predictedEndTranslation.height - value.translation.height
+                let projectedEndHeight = currentTargetHeight - (translation + velocity * 0.35)
+
+                let detents: [DrawerDetent] = [.collapsed, .medium, .expanded]
+                let closest = detents.min(by: {
+                    abs($0.targetHeight(screenHeight: screenHeight, bottomSafeArea: bottomSafeArea) - projectedEndHeight) <
+                    abs($1.targetHeight(screenHeight: screenHeight, bottomSafeArea: bottomSafeArea) - projectedEndHeight)
+                }) ?? .medium
+
+                HapticFeedback.selection()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    drawerDetent = closest
+                    dragOffset = 0
+                }
+            }
+    }
+
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // 顶部：天数选择横向胶囊栏 (自然森林色系高光)
-                daySwitcherBar
-                
-                Divider()
-                    .opacity(0.5)
-                
-                // 当日概览统计横幅
-                daySummaryBanner
-                
-                // 竖向步进时间轴卡片列表
-                if sortedNodes.isEmpty {
-                    emptyDayView
-                } else {
-                    nodesListView
-                }
+        VStack(spacing: 0) {
+            // 抽屉头部交互区 (抓手、标题、加节点、天数横滑栏、当日概览)
+            headerSection
+
+            // 竖向步进时间轴卡片列表
+            if sortedNodes.isEmpty {
+                emptyDayView
+                    .frame(maxHeight: .infinity)
+            } else {
+                nodesListView
+                    .frame(maxHeight: .infinity)
             }
-            .background(AppTheme.canvasBackground)
-            .navigationTitle(trip.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+        }
+        .frame(height: displayedHeight)
+        .frame(maxWidth: .infinity)
+        .background(
+            ZStack {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                AppTheme.canvasBackground
+                    .opacity(0.88)
+            }
+        )
+        .clipShape(
+            RoundedCornerShape(radius: 26, corners: [.topLeft, .topRight])
+        )
+        .overlay(
+            RoundedCornerShape(radius: 26, corners: [.topLeft, .topRight])
+                .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.12), radius: 18, x: 0, y: -6)
+        .confirmationDialog(
+            "请选择导航应用",
+            isPresented: $showNavigationDialog,
+            titleVisibility: .visible
+        ) {
+            if let target = navigatingNode {
+                let relay = NavigationRelayService.shared
+                ForEach(relay.availableApps) { app in
+                    Button(app.rawValue) {
                         HapticFeedback.light()
-                        onAddNode()
-                    } label: {
-                        Label("加节点", systemImage: "plus")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(AppTheme.sageMint)
+                        relay.launchNavigation(
+                            to: target.coordinate,
+                            destinationName: target.title,
+                            mode: target.incomingTransit,
+                            app: app
+                        )
                     }
                 }
+                Button("取消", role: .cancel) {}
             }
-            .confirmationDialog(
-                "请选择导航应用",
-                isPresented: $showNavigationDialog,
-                titleVisibility: .visible
-            ) {
-                if let target = navigatingNode {
-                    let relay = NavigationRelayService.shared
-                    ForEach(relay.availableApps) { app in
-                        Button(app.rawValue) {
-                            HapticFeedback.light()
-                            relay.launchNavigation(
-                                to: target.coordinate,
-                                destinationName: target.title,
-                                mode: target.incomingTransit,
-                                app: app
-                            )
-                        }
-                    }
-                    Button("取消", role: .cancel) {}
-                }
-            } message: {
-                if let target = navigatingNode {
-                    Text("精准导航至：\(target.title)")
-                }
+        } message: {
+            if let target = navigatingNode {
+                Text("精准导航至：\(target.title)")
             }
         }
     }
-    
+
+    // MARK: - 抽屉头部交互区
+    private var headerSection: some View {
+        VStack(spacing: 0) {
+            // 1. 顶部小抓手
+            Capsule()
+                .fill(Color.primary.opacity(0.20))
+                .frame(width: 36, height: 5)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        switch drawerDetent {
+                        case .collapsed:
+                            drawerDetent = .medium
+                        case .medium:
+                            drawerDetent = .expanded
+                        case .expanded:
+                            drawerDetent = .collapsed
+                        }
+                    }
+                }
+
+            // 2. 行程标题与快捷操作栏
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(trip.title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    if !trip.destination.isEmpty {
+                        Text(trip.destination)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                // 抽屉展开/收起辅助切换按键
+                Button {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        drawerDetent = (drawerDetent == .collapsed) ? .medium : .collapsed
+                    }
+                } label: {
+                    Image(systemName: drawerDetent == .collapsed ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                // 加节点操作按钮
+                Button {
+                    HapticFeedback.light()
+                    onAddNode()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("加节点")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(AppTheme.sageMint.opacity(0.15))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+
+            // 3. 天数横向选择胶囊栏
+            daySwitcherBar
+
+            Divider()
+                .opacity(0.4)
+
+            // 4. 当日概览统计横幅
+            daySummaryBanner
+        }
+        .contentShape(Rectangle())
+        .gesture(dragGesture)
+    }
+
     // MARK: - 天数横向选择栏
-    
     private var daySwitcherBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
@@ -100,13 +273,13 @@ struct TripDayTimelineSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Day \(day.dayIndex)")
                                     .font(.system(size: 13, weight: isSelected ? .bold : .semibold, design: .rounded))
-                                
+
                                 Text(day.date.formatted(.dateTime.month().day()))
                                     .font(.system(size: 10))
                                     .foregroundStyle(isSelected ? .white.opacity(0.85) : .secondary)
                             }
-                            
-                            // 当日完成度小圆环 / 计数胶囊
+
+                            // 当日完成度小徽标
                             if !day.nodes.isEmpty {
                                 Text("\(day.visitedNodesCount)/\(day.nodes.count)")
                                     .font(.system(size: 9, weight: .bold))
@@ -130,19 +303,18 @@ struct TripDayTimelineSheet: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
         }
     }
-    
+
     // MARK: - 当日概览横幅
-    
     private var daySummaryBanner: some View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
                 Image(systemName: "flag.fill")
                     .font(.caption)
                     .foregroundStyle(AppTheme.sageMint)
-                
+
                 if let summary = currentDay?.summary, !summary.isEmpty {
                     Text(summary)
                         .font(.caption)
@@ -153,9 +325,9 @@ struct TripDayTimelineSheet: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // 进度比例
                 if let day = currentDay, !day.nodes.isEmpty {
                     Text("\(Int(day.progress * 100))%")
@@ -163,7 +335,7 @@ struct TripDayTimelineSheet: View {
                         .foregroundStyle(AppTheme.sageMint)
                 }
             }
-            
+
             // 细长进度条
             if let day = currentDay, !day.nodes.isEmpty {
                 GeometryReader { geo in
@@ -171,7 +343,7 @@ struct TripDayTimelineSheet: View {
                         Capsule()
                             .fill(Color.primary.opacity(0.06))
                             .frame(height: 3)
-                        
+
                         Capsule()
                             .fill(AppTheme.mintGradient)
                             .frame(width: geo.size.width * CGFloat(day.progress), height: 3)
@@ -185,9 +357,8 @@ struct TripDayTimelineSheet: View {
         .padding(.vertical, 8)
         .background(AppTheme.forestPrimary.opacity(0.04))
     }
-    
+
     // MARK: - 节点列表
-    
     private var nodesListView: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -201,6 +372,11 @@ struct TripDayTimelineSheet: View {
                             isSelected: selectedNodeId == node.id,
                             onSelect: {
                                 selectedNodeId = node.id
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                    if drawerDetent == .collapsed {
+                                        drawerDetent = .medium
+                                    }
+                                }
                                 onNodeSelected(node)
                             },
                             onNavigate: {
@@ -210,7 +386,7 @@ struct TripDayTimelineSheet: View {
                         )
                         .id(node.id)
                     }
-                    
+
                     // 底部添加下一站操作
                     Button {
                         HapticFeedback.light()
@@ -238,7 +414,7 @@ struct TripDayTimelineSheet: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
-                .padding(.bottom, 24)
+                .padding(.bottom, bottomSafeArea + 24)
             }
             .onChange(of: selectedNodeId) { _, newId in
                 if let newId = newId {
@@ -248,10 +424,13 @@ struct TripDayTimelineSheet: View {
                 }
             }
         }
+        // 当折叠态露头时，允许上滑手势直接拉出抽屉
+        .simultaneousGesture(
+            drawerDetent == .collapsed ? dragGesture : nil
+        )
     }
-    
+
     // MARK: - 空状态
-    
     private var emptyDayView: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -275,6 +454,10 @@ struct TripDayTimelineSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, bottomSafeArea + 16)
     }
 }
+
+/// 兼容别名
+typealias TripDayTimelineSheet = TripDayTimelineDrawer
