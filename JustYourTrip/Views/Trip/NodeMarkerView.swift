@@ -4,6 +4,8 @@ import SwiftUI
 struct NodeMarkerView: View {
     let node: RouteNode
     var index: Int? = nil
+    var indexText: String? = nil
+    var dayColor: Color? = nil
     let isSelected: Bool
     
     var body: some View {
@@ -36,16 +38,19 @@ struct NodeMarkerView: View {
                     .font(.system(size: isSelected ? 16 : 13, weight: .bold))
                     .foregroundStyle(.white)
                 
-                // 左上角数字序号角标
-                if let index = index {
-                    Text("\(index)")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .foregroundStyle(isSelected ? markerColor : Color.white)
-                        .frame(width: 16, height: 16)
-                        .background(isSelected ? Color.white : AppTheme.forestDeep)
-                        .clipShape(Circle())
+                // 左上角数字序号/天数标识角标
+                let badgeText = indexText ?? index.map { "\($0)" }
+                if let badge = badgeText {
+                    Text(badge)
+                        .font(.system(size: badge.count > 2 ? 8 : 9, weight: .black, design: .rounded))
+                        .foregroundStyle(isSelected ? (dayColor ?? markerColor) : Color.white)
+                        .frame(minWidth: 16)
+                        .frame(height: 16)
+                        .padding(.horizontal, badge.count > 2 ? 3 : 0)
+                        .background(isSelected ? Color.white : (dayColor ?? AppTheme.forestDeep))
+                        .clipShape(Capsule())
                         .overlay(
-                            Circle()
+                            Capsule()
                                 .stroke(Color.white.opacity(0.85), lineWidth: 1)
                         )
                         .offset(x: isSelected ? -14 : -12, y: isSelected ? -14 : -12)
@@ -109,6 +114,9 @@ struct NodeMarkerView: View {
     private var markerColor: Color {
         if node.isVisited {
             return AppTheme.sageMint
+        }
+        if let dayColor = dayColor {
+            return dayColor
         }
         switch node.nodeType {
         case .attraction:

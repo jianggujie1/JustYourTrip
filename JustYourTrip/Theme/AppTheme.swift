@@ -50,6 +50,21 @@ enum AppTheme {
     static let skyTeal = Color(hex: "2A9D8F")          // 公交/渡口青绿
     static let royalPurple = Color(hex: "795290")      // 特色换乘紫
     
+    // 多日总览色彩方案 (各天具有鲜明视觉区分与自然美感)
+    static func dayColor(for dayIndex: Int) -> Color {
+        let palette: [Color] = [
+            forestPrimary,    // Day 1: 经典墨绿
+            sunsetCoral,      // Day 2: 晚霞珊瑚红
+            warmAmber,        // Day 3: 暖琥珀金
+            royalPurple,      // Day 4: 优雅紫
+            skyTeal,          // Day 5: 湖海青
+            indigoPrimary,    // Day 6: 靛青深蓝
+            sageMint          // Day 7: 鼠尾草薄荷绿
+        ]
+        guard dayIndex > 0 else { return sageMint }
+        return palette[(dayIndex - 1) % palette.count]
+    }
+    
     // 背景与卡片质感
     static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
     static let tertiaryBackground = Color(uiColor: .tertiarySystemGroupedBackground)

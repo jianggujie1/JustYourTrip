@@ -65,12 +65,26 @@ struct TripDayTimelineDrawer: View {
     @State private var dayToDelete: TripDay?
     @State private var showDeleteDayAlert = false
 
+    private var isOverviewMode: Bool {
+        selectedDayIndex == 0
+    }
+
+    private var sortedDays: [TripDay] {
+        trip.days.sorted(by: { $0.dayIndex < $1.dayIndex })
+    }
+
     private var currentDay: TripDay? {
-        trip.days.first(where: { $0.dayIndex == selectedDayIndex })
+        if isOverviewMode {
+            return sortedDays.first
+        }
+        return trip.days.first(where: { $0.dayIndex == selectedDayIndex })
     }
 
     private var sortedNodes: [RouteNode] {
-        currentDay?.sortedNodes ?? []
+        if isOverviewMode {
+            return sortedDays.flatMap(\.sortedNodes)
+        }
+        return currentDay?.sortedNodes ?? []
     }
 
     private var currentTargetHeight: CGFloat {
@@ -123,6 +137,9 @@ struct TripDayTimelineDrawer: View {
             // 竖向步进时间轴卡片列表
             if sortedNodes.isEmpty {
                 emptyDayView
+                    .frame(maxHeight: .infinity)
+            } else if isOverviewMode {
+                overviewNodesListView
                     .frame(maxHeight: .infinity)
             } else {
                 nodesListView
@@ -185,7 +202,8 @@ struct TripDayTimelineDrawer: View {
                 nodeToDelete = nil
             }
         } message: { node in
-            Text("确定从 Day \(selectedDayIndex) 中删除「\(node.title)」吗？该操作无法撤销。")
+            let dayText = (node.day?.dayIndex).map { "Day \($0)" } ?? "行程"
+            Text("确定从 \(dayText) 中删除「\(node.title)」吗？该操作无法撤销。")
         }
         .sheet(item: $editingNode) { node in
             EditNodeSheet(
@@ -276,8 +294,8 @@ struct TripDayTimelineDrawer: View {
                 }
                 .buttonStyle(.plain)
 
-                // 调序操作按钮 (多于1站时允许快捷调序)
-                if sortedNodes.count > 1 {
+                // 调序操作按钮 (单日模式且多于1站时允许快捷调序)
+                if !isOverviewMode && sortedNodes.count > 1 {
                     Button {
                         HapticFeedback.light()
                         showReorderSheet = true
@@ -336,7 +354,42 @@ struct TripDayTimelineDrawer: View {
     private var daySwitcherBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(trip.days.sorted(by: { $0.dayIndex < $1.dayIndex })) { day in
+                // 1. 全景总览入口胶囊 (selectedDayIndex == 0)
+                let isOverviewSelected = selectedDayIndex == 0
+                Button {
+                    HapticFeedback.selection()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                        selectedDayIndex = 0
+                        selectedNodeId = nil
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "map.fill")
+                            .font(.system(size: 11, weight: .bold))
+
+                        Text("全景总览")
+                            .font(.system(size: 13, weight: isOverviewSelected ? .bold : .semibold, design: .rounded))
+
+                        Text("\(trip.days.count)天")
+                            .font(.system(size: 9, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(isOverviewSelected ? Color.white.opacity(0.25) : Color.primary.opacity(0.06))
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(isOverviewSelected ? AnyShapeStyle(AppTheme.brandGradient) : AnyShapeStyle(Color(uiColor: .tertiarySystemFill)))
+                    )
+                    .foregroundStyle(isOverviewSelected ? .white : .primary)
+                    .shadow(color: isOverviewSelected ? AppTheme.sageMint.opacity(0.35) : .clear, radius: 6, x: 0, y: 3)
+                }
+                .buttonStyle(.plain)
+
+                // 2. 每日胶囊
+                ForEach(sortedDays) { day in
                     let isSelected = selectedDayIndex == day.dayIndex
                     Button {
                         HapticFeedback.selection()
@@ -346,6 +399,10 @@ struct TripDayTimelineDrawer: View {
                         }
                     } label: {
                         HStack(spacing: 6) {
+                            Circle()
+                                .fill(isSelected ? Color.white : AppTheme.dayColor(for: day.dayIndex))
+                                .frame(width: 6, height: 6)
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Day \(day.dayIndex)")
                                     .font(.system(size: 13, weight: isSelected ? .bold : .semibold, design: .rounded))
@@ -388,7 +445,7 @@ struct TripDayTimelineDrawer: View {
                     }
                 }
 
-                // 快捷增加天数胶囊
+                // 3. 快捷增加天数胶囊
                 Button {
                     HapticFeedback.light()
                     addNewDay()
@@ -416,37 +473,57 @@ struct TripDayTimelineDrawer: View {
         }
     }
 
-    // MARK: - 当日概览横幅
+    // MARK: - 当日/全景概览横幅
     private var daySummaryBanner: some View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
-                Image(systemName: "flag.fill")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.sageMint)
+                if isOverviewMode {
+                    Image(systemName: "globe.asia.australia.fill")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.sageMint)
 
-                if let summary = currentDay?.summary, !summary.isEmpty {
-                    Text(summary)
+                    Text("全景总览 · 全程共 \(trip.days.count) 天 \(trip.totalNodesCount) 站")
                         .font(.caption)
                         .foregroundStyle(.primary)
-                        .lineLimit(1)
+
+                    Spacer()
+
+                    if trip.totalNodesCount > 0 {
+                        Text("\(trip.visitedNodesCount)/\(trip.totalNodesCount) 已打卡 (\(Int(trip.progress * 100))%)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.sageMint)
+                    }
                 } else {
-                    Text("Day \(selectedDayIndex) · 今日计划共 \(sortedNodes.count) 站")
+                    Image(systemName: "flag.fill")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                        .foregroundStyle(AppTheme.dayColor(for: selectedDayIndex))
 
-                Spacer()
+                    if let summary = currentDay?.summary, !summary.isEmpty {
+                        Text(summary)
+                            .font(.caption)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Day \(selectedDayIndex) · 今日计划共 \(sortedNodes.count) 站")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
-                // 进度比例
-                if let day = currentDay, !day.nodes.isEmpty {
-                    Text("\(Int(day.progress * 100))%")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(AppTheme.sageMint)
+                    Spacer()
+
+                    // 进度比例
+                    if let day = currentDay, !day.nodes.isEmpty {
+                        Text("\(day.visitedNodesCount)/\(day.nodes.count) (\(Int(day.progress * 100))%)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.sageMint)
+                    }
                 }
             }
 
             // 细长进度条
-            if let day = currentDay, !day.nodes.isEmpty {
+            let progressValue = isOverviewMode ? trip.progress : (currentDay?.progress ?? 0)
+            let hasNodes = isOverviewMode ? (trip.totalNodesCount > 0) : ((currentDay?.nodes.count ?? 0) > 0)
+            if hasNodes {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -455,8 +532,8 @@ struct TripDayTimelineDrawer: View {
 
                         Capsule()
                             .fill(AppTheme.mintGradient)
-                            .frame(width: geo.size.width * CGFloat(day.progress), height: 3)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: day.progress)
+                            .frame(width: geo.size.width * CGFloat(progressValue), height: 3)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: progressValue)
                     }
                 }
                 .frame(height: 3)
@@ -467,15 +544,21 @@ struct TripDayTimelineDrawer: View {
         .background(AppTheme.forestPrimary.opacity(0.04))
     }
 
-    // MARK: - 节点列表
+    // MARK: - 单日专注节点列表
     private var nodesListView: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 8) {
+                    // 前日承接提示 (当非第一天时展示)
+                    if selectedDayIndex > 1, let prevDay = trip.days.first(where: { $0.dayIndex == selectedDayIndex - 1 }) {
+                        previousDayTransitionHint(prevDay: prevDay)
+                    }
+
                     ForEach(Array(sortedNodes.enumerated()), id: \.element.id) { index, node in
                         NodeCardView(
                             node: node,
                             index: index + 1,
+                            dayColor: AppTheme.dayColor(for: selectedDayIndex),
                             isFirst: index == 0,
                             isLast: index == sortedNodes.count - 1,
                             isSelected: selectedNodeId == node.id,
@@ -537,6 +620,11 @@ struct TripDayTimelineDrawer: View {
                     .buttonStyle(.plain)
                     .padding(.top, 10)
                     .padding(.leading, 32) // 与左侧轴线对齐
+
+                    // 次日启程预告 (当非最后一天时展示)
+                    if let nextDay = trip.days.first(where: { $0.dayIndex == selectedDayIndex + 1 }) {
+                        nextDayTransitionHint(nextDay: nextDay)
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 14)
@@ -556,9 +644,360 @@ struct TripDayTimelineDrawer: View {
         )
     }
 
+    // MARK: - 全景总览多日连续时间轴
+    private var overviewNodesListView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(Array(sortedDays.enumerated()), id: \.element.id) { dayIndex, day in
+                        // 1. 各天头部卡片 (含 "只看这天" 快捷按键)
+                        dayOverviewHeader(day: day)
+
+                        // 2. 当日节点列表
+                        if day.nodes.isEmpty {
+                            dayOverviewEmptyRow(day: day)
+                        } else {
+                            ForEach(Array(day.sortedNodes.enumerated()), id: \.element.id) { nodeIdx, node in
+                                NodeCardView(
+                                    node: node,
+                                    index: nodeIdx + 1,
+                                    indexText: "D\(day.dayIndex)-\(nodeIdx + 1)",
+                                    dayColor: AppTheme.dayColor(for: day.dayIndex),
+                                    isFirst: nodeIdx == 0,
+                                    isLast: nodeIdx == day.sortedNodes.count - 1,
+                                    isSelected: selectedNodeId == node.id,
+                                    onSelect: {
+                                        selectedNodeId = node.id
+                                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                            if drawerDetent == .collapsed {
+                                                drawerDetent = .medium
+                                            }
+                                        }
+                                        onNodeSelected(node)
+                                    },
+                                    onNavigate: {
+                                        navigatingNode = node
+                                        showNavigationDialog = true
+                                    },
+                                    onEdit: {
+                                        editingNode = node
+                                    },
+                                    onDelete: {
+                                        nodeToDelete = node
+                                        showDeleteConfirmation = true
+                                    },
+                                    onMoveUp: {
+                                        moveNodeUp(node)
+                                    },
+                                    onMoveDown: {
+                                        moveNodeDown(node)
+                                    },
+                                    otherDays: trip.days.filter { $0.id != day.id },
+                                    onMoveToDay: { targetDay in
+                                        moveNodeToDay(node, targetDay: targetDay)
+                                    }
+                                )
+                                .id(node.id)
+                            }
+                        }
+
+                        // 3. 跨日衔接桥梁卡片 (当存在次日时展示，彻底消除割裂感)
+                        if dayIndex < sortedDays.count - 1 {
+                            let nextDay = sortedDays[dayIndex + 1]
+                            crossDayTransitionCard(from: day, to: nextDay)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, bottomSafeArea + 24)
+            }
+            .onChange(of: selectedNodeId) { _, newId in
+                if let newId = newId {
+                    withAnimation {
+                        proxy.scrollTo(newId, anchor: .center)
+                    }
+                }
+            }
+        }
+        .simultaneousGesture(
+            drawerDetent == .collapsed ? dragGesture : nil
+        )
+    }
+
+    // MARK: - 全景总览单天头部卡片
+    private func dayOverviewHeader(day: TripDay) -> some View {
+        let dayColor = AppTheme.dayColor(for: day.dayIndex)
+        return HStack(spacing: 8) {
+            Circle()
+                .fill(dayColor)
+                .frame(width: 10, height: 10)
+
+            Text("Day \(day.dayIndex)")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            Text(day.date.formatted(.dateTime.month().day().weekday()))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            if !day.summary.isEmpty {
+                Text("• \(day.summary)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // "只看这天" 快捷切换
+            Button {
+                HapticFeedback.selection()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                    selectedDayIndex = day.dayIndex
+                    selectedNodeId = day.sortedNodes.first?.id
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text("只看这天")
+                        .font(.system(size: 11, weight: .bold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(dayColor.opacity(0.12))
+                .foregroundStyle(dayColor)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, 10)
+    }
+
+    // MARK: - 全景总览单天空列表占位
+    private func dayOverviewEmptyRow(day: TripDay) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "mappin.slash")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            Text("Day \(day.dayIndex) 暂无安排地点")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                HapticFeedback.light()
+                selectedDayIndex = day.dayIndex
+                onAddNode()
+            } label: {
+                Text("+ 加地点")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AppTheme.forestPrimary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.primary.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - 跨日交接卡片 (连接 Day K 与 Day K+1)
+    private func crossDayTransitionCard(from currentDay: TripDay, to nextDay: TripDay) -> some View {
+        let fromLastNode = currentDay.sortedNodes.last
+        let toFirstNode = nextDay.sortedNodes.first
+        let currentColor = AppTheme.dayColor(for: currentDay.dayIndex)
+        let nextColor = AppTheme.dayColor(for: nextDay.dayIndex)
+
+        return HStack(spacing: 12) {
+            // 左侧跨日连接线
+            VStack(spacing: 3) {
+                Circle()
+                    .fill(currentColor)
+                    .frame(width: 8, height: 8)
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [currentColor, nextColor],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 2.2, height: 32)
+                Circle()
+                    .fill(nextColor)
+                    .frame(width: 8, height: 8)
+            }
+            .frame(width: 32)
+
+            // 跨日交接卡片内容
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.stars.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppTheme.royalPurple)
+
+                    Text("夜间休整 · 跨日衔接")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Text("Day \(currentDay.dayIndex) ➔ Day \(nextDay.dayIndex)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.primary.opacity(0.05))
+                        .clipShape(Capsule())
+                }
+
+                if let fromNode = fromLastNode, let toNode = toFirstNode {
+                    HStack(spacing: 4) {
+                        Text(fromNode.title)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(AppTheme.royalPurple)
+
+                        Text(toNode.title)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Text("完成当日安排，准备迎接次日旅程")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [currentColor.opacity(0.35), nextColor.opacity(0.35)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])
+                    )
+            )
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - 单日模式前日承接提示
+    private func previousDayTransitionHint(prevDay: TripDay) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sunrise.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(AppTheme.warmAmber)
+
+            Text("承接 Day \(prevDay.dayIndex) 旅程")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            if let prevLast = prevDay.sortedNodes.last {
+                Text("• 上站：\(prevLast.title)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button {
+                HapticFeedback.light()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    selectedDayIndex = prevDay.dayIndex
+                    selectedNodeId = prevDay.sortedNodes.last?.id
+                }
+            } label: {
+                Text("查看前日")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(AppTheme.forestPrimary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(Capsule())
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - 单日模式次日启程预告
+    private func nextDayTransitionHint(nextDay: TripDay) -> some View {
+        Button {
+            HapticFeedback.selection()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                selectedDayIndex = nextDay.dayIndex
+                selectedNodeId = nextDay.sortedNodes.first?.id
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(AppTheme.royalPurple)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("结束 Day \(selectedDayIndex) · 次日启程预告")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    if let nextFirst = nextDay.sortedNodes.first {
+                        Text("次日首站：\(nextFirst.title)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("前往 Day \(nextDay.dayIndex) 规划行程")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                HStack(spacing: 2) {
+                    Text("前往 Day \(nextDay.dayIndex)")
+                        .font(.system(size: 11, weight: .bold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(AppTheme.forestPrimary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(AppTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(AppTheme.royalPurple.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 6)
+        .padding(.leading, 32)
+    }
+
+    // MARK: - 节点归属与操作支持
+    private func nodeBelongingDay(_ node: RouteNode) -> TripDay? {
+        node.day ?? trip.days.first(where: { $0.nodes.contains(where: { $0.id == node.id }) }) ?? currentDay
+    }
+
     // MARK: - 删除节点业务逻辑
     private func deleteNode(_ node: RouteNode) {
-        guard let day = currentDay else { return }
+        guard let day = nodeBelongingDay(node) else { return }
         HapticFeedback.warning()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             let remaining = day.sortedNodes.filter { $0.id != node.id }
@@ -580,7 +1019,7 @@ struct TripDayTimelineDrawer: View {
     // MARK: - 节点排序与移动逻辑
     
     private func moveNodeUp(_ node: RouteNode) {
-        guard let day = currentDay else { return }
+        guard let day = nodeBelongingDay(node) else { return }
         let nodes = day.sortedNodes
         guard let idx = nodes.firstIndex(where: { $0.id == node.id }), idx > 0 else { return }
         HapticFeedback.selection()
@@ -594,7 +1033,7 @@ struct TripDayTimelineDrawer: View {
     }
     
     private func moveNodeDown(_ node: RouteNode) {
-        guard let day = currentDay else { return }
+        guard let day = nodeBelongingDay(node) else { return }
         let nodes = day.sortedNodes
         guard let idx = nodes.firstIndex(where: { $0.id == node.id }), idx < nodes.count - 1 else { return }
         HapticFeedback.selection()
@@ -608,18 +1047,18 @@ struct TripDayTimelineDrawer: View {
     }
     
     private func moveNodeToDay(_ node: RouteNode, targetDay: TripDay) {
-        guard let currentDay = currentDay, currentDay.id != targetDay.id else { return }
+        guard let day = nodeBelongingDay(node), day.id != targetDay.id else { return }
         HapticFeedback.success()
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             if selectedNodeId == node.id {
-                selectedNodeId = currentDay.sortedNodes.filter({ $0.id != node.id }).first?.id
+                selectedNodeId = day.sortedNodes.filter({ $0.id != node.id }).first?.id
             }
-            currentDay.nodes.removeAll(where: { $0.id == node.id })
+            day.nodes.removeAll(where: { $0.id == node.id })
             node.day = targetDay
             node.sortOrder = targetDay.nodes.count
             targetDay.nodes.append(node)
             
-            for (idx, n) in currentDay.sortedNodes.enumerated() { n.sortOrder = idx }
+            for (idx, n) in day.sortedNodes.enumerated() { n.sortOrder = idx }
             for (idx, n) in targetDay.sortedNodes.enumerated() { n.sortOrder = idx }
             try? modelContext.save()
         }
@@ -676,12 +1115,12 @@ struct TripDayTimelineDrawer: View {
                     .font(.system(size: 32))
                     .foregroundStyle(AppTheme.sageMint)
             }
-            Text("今日暂无行程节点")
+            Text(isOverviewMode ? "行程暂无任何地点" : "今日暂无行程节点")
                 .font(.headline)
-            Text("点击下方按钮添加今日的景点、车站或餐厅")
+            Text(isOverviewMode ? "点击下方按钮开启你的行程规划" : "点击下方按钮添加今日的景点、车站或餐厅")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button("添加今日第一站", action: onAddNode)
+            Button(isOverviewMode ? "添加首个地点" : "添加今日第一站", action: onAddNode)
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.forestPrimary)
                 .controlSize(.regular)

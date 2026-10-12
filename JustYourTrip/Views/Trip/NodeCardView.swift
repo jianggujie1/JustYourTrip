@@ -4,6 +4,8 @@ import SwiftUI
 struct NodeCardView: View {
     @Bindable var node: RouteNode
     var index: Int = 1
+    var indexText: String? = nil
+    var dayColor: Color? = nil
     var isFirst: Bool = false
     var isLast: Bool = false
     let isSelected: Bool
@@ -59,7 +61,7 @@ struct NodeCardView: View {
         ZStack {
             if isSelected {
                 Circle()
-                    .stroke(AppTheme.sageMint.opacity(0.4), lineWidth: 4)
+                    .stroke((dayColor ?? AppTheme.sageMint).opacity(0.4), lineWidth: 4)
                     .frame(width: 34, height: 34)
             }
             
@@ -77,9 +79,10 @@ struct NodeCardView: View {
                     .font(.system(size: 11, weight: .black))
                     .foregroundStyle(.white)
             } else {
-                Text("\(index)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.75))
+                let badge = indexText ?? "\(index)"
+                Text(badge)
+                    .font(.system(size: badge.count > 2 ? 8 : 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.white : (dayColor ?? Color.primary.opacity(0.75)))
             }
         }
         .frame(width: 32, height: 32)
@@ -89,7 +92,7 @@ struct NodeCardView: View {
         if node.isVisited {
             return AnyShapeStyle(AppTheme.sageMint)
         } else if isSelected {
-            return AnyShapeStyle(AppTheme.forestPrimary)
+            return AnyShapeStyle(dayColor ?? AppTheme.forestPrimary)
         } else {
             return AnyShapeStyle(AppTheme.cardBackground)
         }
@@ -99,9 +102,9 @@ struct NodeCardView: View {
         if node.isVisited {
             return .clear
         } else if isSelected {
-            return AppTheme.sageMint
+            return dayColor ?? AppTheme.sageMint
         } else {
-            return Color.primary.opacity(0.2)
+            return (dayColor ?? Color.primary).opacity(0.2)
         }
     }
     
@@ -109,9 +112,9 @@ struct NodeCardView: View {
         if node.isVisited {
             return AppTheme.sageMint
         } else if isSelected {
-            return AppTheme.forestPrimary
+            return dayColor ?? AppTheme.forestPrimary
         } else {
-            return Color.secondary
+            return dayColor ?? Color.secondary
         }
     }
     
