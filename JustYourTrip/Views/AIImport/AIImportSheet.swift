@@ -26,7 +26,7 @@ enum AIStep: Int, CaseIterable, Identifiable {
     }
 }
 
-/// 小红书/社媒攻略 AI 导入浮层 (端侧无头抓取 + 直连 LLM 路线提取)
+/// 小红书/社媒攻略 AI 导入浮层 (端侧无头抓取 + 直连 LLM 实时流式提取)
 struct AIImportSheet: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -34,6 +34,14 @@ struct AIImportSheet: View {
     @State private var isProcessing: Bool = false
     @State private var currentStep: AIStep = .sniffing
     @State private var errorMessage: String?
+    
+    // 流式打字机状态 (类似 AI 问答)
+    @State private var streamContent: String = ""
+    @State private var streamReasoning: String = ""
+    @State private var showReasoning: Bool = false
+    @State private var isReasoningPhase: Bool = false
+    @State private var geocodingInfo: String = ""
+    @State private var parseTask: Task<Void, Never>? = nil
     
     // 解析成功后的草稿数据
     @State private var parsedDraftDays: [DraftDay] = []
@@ -48,33 +56,48 @@ struct AIImportSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                // 1. 顶部功能介绍卡片
-                headerGuideCard
-                
-                // 2. 输入框区域
-                inputEditorSection
-                
-                // 3. 处理中动态流程指示卡片
-                if isProcessing {
-                    processingPipelineCard
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // 1. 顶部功能介绍卡片
+                        headerGuideCard
+                        
+                        // 2. 输入框区域 (未开始时展示完整输入框，处理中时收纳为摘要卡片)
+                        if !isProcessing {
+                            inputEditorSection
+                        } else {
+                            processingInputSummary
+                        }
+                        
+                        // 3. 处理中动态流程指示卡片
+                        if isProcessing {
+                            processingPipelineCard
+                            
+                            // 实时 AI 问答打字机控制台
+                            if currentStep == .reasoning {
+                                streamingConsoleCard
+                            }
+                        }
+                        
+                        // 4. 错误提示
+                        if let error = errorMessage {
+                            errorBanner(message: error)
+                        }
+                    }
+                    .padding(.vertical, 14)
                 }
                 
-                // 4. 错误提示
-                if let error = errorMessage {
-                    errorBanner(message: error)
-                }
-                
-                Spacer()
-                
-                // 5. 底部开始解析按钮
+                // 5. 底部开始/中断解析按钮
                 actionButton
             }
             .navigationTitle("AI 攻略导入")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("关闭") { dismiss() }
+                    Button("关闭") {
+                        parseTask?.cancel()
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -114,16 +137,45 @@ struct AIImportSheet: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(AppTheme.sageMint)
-                Text("端侧无感智能提取")
+                Text("端侧无感智能流式提取")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
-            Text("支持直接粘贴小红书笔记文案、长篇游记或短链接（如 xhslink.com/...）。系统纯端侧直接解析并提取出多模态交通路线与打卡点。")
+            Text("支持直接粘贴小红书笔记文案、长篇游记或短链接（如 xhslink.com/...）。直连大模型采用 SSE 流式长连接输出，像对话问答一样实时展示构思细节，告别超时等待。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
         }
         .padding(14)
         .glassCard(cornerRadius: 18)
+        .padding(.horizontal, 16)
+    }
+    
+    // MARK: - 处理中文案摘要胶囊
+    
+    private var processingInputSummary: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "doc.text.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.forestPrimary)
+            
+            Text(inputText.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " "))
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .foregroundStyle(.secondary)
+            
+            Spacer()
+            
+            Text("共 \(inputText.count) 字")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(12)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        )
         .padding(.horizontal, 16)
     }
     
@@ -194,7 +246,7 @@ struct AIImportSheet: View {
                     .opacity(pulseEffect ? 1.0 : 0.5)
                     .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseEffect)
                 
-                Text("AI 正在提取路线...")
+                Text(currentStep == .reasoning ? "AI 实时构思与路线提取中..." : (currentStep == .geocoding ? "地理编码校准中..." : "正在抓取网页内容..."))
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(AppTheme.forestPrimary)
             }
@@ -223,9 +275,17 @@ struct AIImportSheet: View {
                             }
                         }
                         
-                        Text(step.title)
-                            .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
-                            .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.sageMint : .secondary))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(step.title)
+                                .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
+                                .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.sageMint : .secondary))
+                            
+                            if isCurrent && step == .geocoding && !geocodingInfo.isEmpty {
+                                Text(geocodingInfo)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(AppTheme.sageMint)
+                            }
+                        }
                         
                         Spacer()
                         
@@ -238,6 +298,115 @@ struct AIImportSheet: View {
             }
         }
         .padding(16)
+        .glassCard(cornerRadius: 18)
+        .padding(.horizontal, 16)
+    }
+    
+    // MARK: - 实时 AI 问答打字机控制台 (Streaming Console)
+    
+    private var streamingConsoleCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // 控制台抬头
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "bubble.left.and.sparkles.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(AppTheme.sageMint)
+                    
+                    Text(isReasoningPhase ? "AI 深度思考推理中..." : "AI 实时构思问答输出")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+                
+                Spacer()
+                
+                // 实时字数统计徽标
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(AppTheme.luminousMint)
+                        .frame(width: 6, height: 6)
+                        .scaleEffect(pulseEffect ? 1.2 : 0.8)
+                    
+                    Text("\(streamContent.count + streamReasoning.count) 字")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(AppTheme.forestPrimary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3.5)
+                .background(AppTheme.forestPrimary.opacity(0.08))
+                .clipShape(Capsule())
+            }
+            
+            // 若包含 DeepSeek R1 思考过程 (reasoning_content)
+            if !streamReasoning.isEmpty {
+                DisclosureGroup(isExpanded: $showReasoning) {
+                    ScrollView {
+                        Text(streamReasoning)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                    }
+                    .frame(maxHeight: 100)
+                    .background(Color.primary.opacity(0.03))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppTheme.warmAmber)
+                        Text("查看模型推理过程 (\(streamReasoning.count) 字)")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.warmAmber)
+                    }
+                }
+            }
+            
+            // 实时打字输出流视窗 (Typewriter AI Chat Bubble)
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if streamContent.isEmpty && streamReasoning.isEmpty {
+                            HStack(spacing: 8) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("已建立流式传输连接，等待模型输出首批词元...")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 16)
+                        } else {
+                            HStack(alignment: .bottom, spacing: 2) {
+                                Text(streamContent.isEmpty ? streamReasoning : streamContent)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                                    .lineSpacing(3)
+                                
+                                // 打字机闪烁光标
+                                Text("▊")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(AppTheme.sageMint)
+                                    .opacity(pulseEffect ? 1.0 : 0.2)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .id("STREAM_BOTTOM")
+                        }
+                    }
+                    .padding(10)
+                }
+                .frame(minHeight: 110, maxHeight: 220)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+                )
+                .onChange(of: streamContent) { _, _ in
+                    scrollProxy.scrollTo("STREAM_BOTTOM", anchor: .bottom)
+                }
+            }
+        }
+        .padding(14)
         .glassCard(cornerRadius: 18)
         .padding(.horizontal, 16)
     }
@@ -256,27 +425,47 @@ struct AIImportSheet: View {
     // MARK: - 底部操作按钮
     
     private var actionButton: some View {
-        Button {
-            HapticFeedback.medium()
-            startParsing()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text("开始 AI 解析提取")
-                    .fontWeight(.bold)
+        Group {
+            if isProcessing {
+                Button {
+                    HapticFeedback.warning()
+                    cancelParsing()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "stop.circle.fill")
+                        Text("中断解析")
+                            .fontWeight(.bold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppTheme.sunsetCoral.opacity(0.12))
+                    .foregroundStyle(AppTheme.sunsetCoral)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+            } else {
+                Button {
+                    HapticFeedback.medium()
+                    startParsing()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                        Text("开始 AI 流式解析提取")
+                            .fontWeight(.bold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(AppTheme.brandGradient)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: AppTheme.sageMint.opacity(0.35), radius: 8, x: 0, y: 3)
+                }
+                .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(AppTheme.brandGradient)
-            .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: AppTheme.sageMint.opacity(0.35), radius: 8, x: 0, y: 3)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
-        .padding(.bottom, 16)
-        .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isProcessing)
-        .opacity(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isProcessing ? 0.6 : 1.0)
+        .padding(.vertical, 12)
     }
     
     // MARK: - 业务逻辑
@@ -304,6 +493,13 @@ struct AIImportSheet: View {
         """
     }
     
+    private func cancelParsing() {
+        parseTask?.cancel()
+        parseTask = nil
+        isProcessing = false
+        errorMessage = "已取消本次解析。"
+    }
+    
     private func startParsing() {
         guard SettingsManager.shared.isApiKeyConfigured else {
             errorMessage = "尚未配置 AI API Key，请点击右上角钥匙图标进行配置"
@@ -313,8 +509,12 @@ struct AIImportSheet: View {
         isProcessing = true
         errorMessage = nil
         currentStep = .sniffing
+        streamContent = ""
+        streamReasoning = ""
+        isReasoningPhase = false
+        geocodingInfo = ""
         
-        Task {
+        parseTask = Task {
             do {
                 var contentToParse = inputText
                 
@@ -331,11 +531,22 @@ struct AIImportSheet: View {
                     }
                 }
                 
-                // 步骤 2：调用直连大模型提取结构化路线
+                try Task.checkCancellation()
+                
+                // 步骤 2：流式调用直连大模型提取结构化路线 (实时打字机效果)
                 await MainActor.run {
                     currentStep = .reasoning
                 }
-                let dto = try await LLMParserService.shared.parseTrip(from: contentToParse)
+                
+                let dto = try await LLMParserService.shared.parseTripStream(from: contentToParse) { progress in
+                    Task { @MainActor in
+                        self.isReasoningPhase = progress.isReasoning
+                        self.streamReasoning = progress.accumulatedReasoning
+                        self.streamContent = progress.accumulatedContent
+                    }
+                }
+                
+                try Task.checkCancellation()
                 
                 // 步骤 3：原生地理编码反查所有节点坐标
                 await MainActor.run {
@@ -343,9 +554,21 @@ struct AIImportSheet: View {
                 }
                 
                 var draftDays: [DraftDay] = []
+                let totalNodesCount = dto.days.reduce(0) { $0 + $1.nodes.count }
+                var currentNodeIndex = 0
+                
                 for dayDTO in dto.days {
                     var draftNodes: [DraftNode] = []
                     for nodeDTO in dayDTO.nodes {
+                        try Task.checkCancellation()
+                        currentNodeIndex += 1
+                        let nodeTitle = nodeDTO.title
+                        let currentIndex = currentNodeIndex
+                        
+                        await MainActor.run {
+                            self.geocodingInfo = "第 \(currentIndex)/\(totalNodesCount) 站: \(nodeTitle)"
+                        }
+                        
                         let nodeType = NodeType(rawValue: nodeDTO.nodeType) ?? .attraction
                         let transitType = TransitType(rawValue: nodeDTO.incomingTransit) ?? .walking
                         
@@ -372,6 +595,8 @@ struct AIImportSheet: View {
                     draftDays.append(DraftDay(dayIndex: dayDTO.dayIndex, summary: dayDTO.summary, nodes: draftNodes))
                 }
                 
+                try Task.checkCancellation()
+                
                 await MainActor.run {
                     self.parsedTripTitle = dto.tripTitle
                     self.parsedDestination = dto.destination
@@ -379,6 +604,10 @@ struct AIImportSheet: View {
                     self.parsedChecklist = dto.suggestedChecklist ?? []
                     self.isProcessing = false
                     self.navigateToCalibration = true
+                }
+            } catch is CancellationError {
+                await MainActor.run {
+                    self.isProcessing = false
                 }
             } catch {
                 await MainActor.run {

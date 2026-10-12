@@ -149,6 +149,12 @@ JustYourTrip/
   - [x] **首发路线亮点速览（Mini Itinerary Stepper）**：直接在卡片上萃取展示前 3 站打卡精选点位、分类类型图标与剩余站数胶囊；
   - [x] **卡片原生缩放转场（Native Zoom Transition）**：基于 iOS 18 原生 `zoom` 转场与降级适配，点击卡片时卡片自适应展开放大至全屏地图详情，轻触返回即平滑缩放回原卡片位置；
   - [x] **详情页控制岛与抽屉联动优化**：顶部控制岛内嵌毛玻璃圆形返回键，抽屉呈现延时平滑升起，隐藏底部 TabBar 杜绝层级与手势冲突。
+- [x] **第八阶段：AI 导入流式传输升级与问答式实时打字体验（Streaming AI Import & Live Console）**：
+  - [x] **直连大模型 SSE 流式输出重构（LLMParserService）**：将原先单次阻塞等待的 POST 请求升级为 `stream: true` 的 Server-Sent Events 流式长连接（宽限 180s），从根源杜绝慢速大模型超时报错；
+  - [x] **AI 问答式打字机实时视窗（Streaming Console）**：在 AI 构思过程中实时逐字打字呈现内容，携带呼吸脉冲光标 `▊`、字数统计胶囊与自适应滚动；
+  - [x] **深度思考模型（DeepSeek-R1）推理过程可视化**：支持捕获并以折叠气泡独立展示 `reasoning_content` 思考过程；
+  - [x] **超强容错 JSON 智能萃取器**：支持从混杂前言、自然对话或 Markdown 标记的流式输出中提取纯净合法的结构化 JSON，并在 DTO 层提供缺省宽容解码；
+  - [x] **支持中途随时中断解析**：底层 Task 支持快速响应取消（Cancellation），按钮状态在「开始」与「中断」间自适应流转。
 
 ---
 
