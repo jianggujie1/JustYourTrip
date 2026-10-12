@@ -11,7 +11,7 @@ enum AIStep: Int, CaseIterable, Identifiable {
     
     var title: String {
         switch self {
-        case .sniffing: return "嗅探笔记富文本"
+        case .sniffing: return "访问网页嗅探攻略正文"
         case .reasoning: return "提取结构化多模态路线"
         case .geocoding: return "反查并校准站点地理坐标"
         }
@@ -26,7 +26,7 @@ enum AIStep: Int, CaseIterable, Identifiable {
     }
 }
 
-/// 小红书/社媒攻略 AI 导入浮层 (端侧无头抓取 + 直连 LLM 实时流式提取)
+/// 小红书/社媒攻略 AI 导入浮层 (端侧双引擎网页嗅探 + 直连 LLM 实时流式提取)
 struct AIImportSheet: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -34,6 +34,9 @@ struct AIImportSheet: View {
     @State private var isProcessing: Bool = false
     @State private var currentStep: AIStep = .sniffing
     @State private var errorMessage: String?
+    
+    // 网页嗅探状态
+    @State private var sniffingStatusInfo: String = ""
     
     // 流式打字机状态 (类似 AI 问答)
     @State private var streamContent: String = ""
@@ -53,6 +56,11 @@ struct AIImportSheet: View {
     
     // 脉冲动效
     @State private var pulseEffect: Bool = false
+
+    /// 实时提取输入框中的 URL
+    private var detectedURL: URL? {
+        WebSnifferService.extractURL(from: inputText)
+    }
 
     var body: some View {
         NavigationStack {
@@ -137,10 +145,10 @@ struct AIImportSheet: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(AppTheme.sageMint)
-                Text("端侧无感智能流式提取")
+                Text("端侧联网嗅探 + 智能流式提取")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
             }
-            Text("支持直接粘贴小红书笔记文案、长篇游记或短链接（如 xhslink.com/...）。直连大模型采用 SSE 流式长连接输出，像对话问答一样实时展示构思细节，告别超时等待。")
+            Text("支持直接粘贴小红书笔记文案、长篇游记或社媒短链接（如 xhslink.com/...）。系统将自动联网抓取页面完整正文并交由大模型实时流式分析，告别单机模型无法联网的局限。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineSpacing(3)
@@ -182,7 +190,7 @@ struct AIImportSheet: View {
     // MARK: - 输入框区域
     
     private var inputEditorSection: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             TextEditor(text: $inputText)
                 .frame(minHeight: 130)
                 .padding(10)
@@ -192,6 +200,11 @@ struct AIImportSheet: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color.primary.opacity(0.08), lineWidth: 1)
                 )
+            
+            // 实时链接识别感知胶囊
+            if let url = detectedURL {
+                detectedURLBanner(url: url)
+            }
             
             HStack {
                 // 快捷剪贴板读取
@@ -231,6 +244,43 @@ struct AIImportSheet: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+    
+    // MARK: - 实时识别到链接时的视觉提示
+    
+    private func detectedURLBanner(url: URL) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "link.badge.plus")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(AppTheme.forestPrimary)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text("已识别到攻略链接:")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(url.host ?? url.absoluteString)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(AppTheme.forestPrimary)
+                        .lineLimit(1)
+                }
+                Text("点击开始后将自动联网访问该网页，抓取真实正文供 AI 解析")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "checkmark.shield.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(AppTheme.sageMint)
+        }
+        .padding(10)
+        .background(AppTheme.sageMint.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppTheme.sageMint.opacity(0.35), lineWidth: 1)
+        )
     }
     
     // MARK: - 处理流程动画卡片
@@ -280,6 +330,15 @@ struct AIImportSheet: View {
                                 .font(.system(size: 12, weight: isCurrent ? .bold : .medium))
                                 .foregroundStyle(isCurrent ? Color.primary : (isDone ? AppTheme.sageMint : .secondary))
                             
+                            // 步骤 1: 嗅探状态细节
+                            if step == .sniffing && !sniffingStatusInfo.isEmpty {
+                                Text(sniffingStatusInfo)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(isDone ? AppTheme.sageMint : AppTheme.forestPrimary)
+                                    .lineLimit(2)
+                            }
+                            
+                            // 步骤 3: 地理编码状态细节
                             if isCurrent && step == .geocoding && !geocodingInfo.isEmpty {
                                 Text(geocodingInfo)
                                     .font(.system(size: 10))
@@ -411,14 +470,57 @@ struct AIImportSheet: View {
         .padding(.horizontal, 16)
     }
     
+    // MARK: - 错误指引提示卡片
+    
     private func errorBanner(message: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(AppTheme.sunsetCoral)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(AppTheme.sunsetCoral)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(AppTheme.warmAmber)
+                    .font(.system(size: 15))
+                
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.primary)
+                    .lineSpacing(3)
+            }
+            
+            // 若错误提示包含指引，提供一键操作辅助
+            if message.contains("复制文案") {
+                HStack(spacing: 8) {
+                    Button {
+                        HapticFeedback.light()
+                        checkClipboard()
+                    } label: {
+                        Label("粘贴已复制的文案", systemImage: "doc.on.clipboard")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(AppTheme.forestPrimary)
+                    
+                    Button {
+                        HapticFeedback.light()
+                        loadSampleText()
+                    } label: {
+                        Label("填入完整示例体验", systemImage: "wand.and.stars")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(AppTheme.warmAmber)
+                }
+                .padding(.top, 4)
+            }
         }
+        .padding(12)
+        .background(AppTheme.warmAmber.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(AppTheme.warmAmber.opacity(0.3), lineWidth: 1)
+        )
         .padding(.horizontal, 16)
     }
     
@@ -509,6 +611,7 @@ struct AIImportSheet: View {
         isProcessing = true
         errorMessage = nil
         currentStep = .sniffing
+        sniffingStatusInfo = ""
         streamContent = ""
         streamReasoning = ""
         isReasoningPhase = false
@@ -518,16 +621,80 @@ struct AIImportSheet: View {
             do {
                 var contentToParse = inputText
                 
-                // 步骤 1：检测是否为链接，若是则尝试端侧无头抓取
+                // 步骤 1：检测是否为链接，若是则双引擎联网嗅探网页真实正文
                 if let url = WebSnifferService.extractURL(from: inputText) {
                     await MainActor.run {
-                        currentStep = .sniffing
+                        self.currentStep = .sniffing
+                        self.sniffingStatusInfo = "正在联网访问 \(url.host ?? "网页")..."
                     }
+                    
+                    let userCleanedNote = WebSnifferService.cleanSocialBoilerplate(from: inputText)
+                    
                     do {
                         let sniffed = try await WebSnifferService.shared.sniffContent(from: url)
-                        contentToParse = "标题: \(sniffed.title)\n\n正文:\n\(sniffed.text)\n\n补充用户输入:\n\(inputText)"
+                        if sniffed.isSufficient {
+                            // 成功抓取到充足的攻略正文
+                            let displayTitle = sniffed.title.isEmpty ? "网页攻略" : sniffed.title
+                            await MainActor.run {
+                                self.sniffingStatusInfo = "已成功提取《\(displayTitle)》（共 \(sniffed.text.count) 字）"
+                            }
+                            var promptText = "【来源网页标题】: \(displayTitle)\n【来源网址】: \(url.absoluteString)\n\n【网页攻略正文】:\n\(sniffed.text)"
+                            if !userCleanedNote.isEmpty {
+                                promptText += "\n\n【用户补充说明】:\n\(userCleanedNote)"
+                            }
+                            contentToParse = promptText
+                        } else {
+                            // 抓取到的内容不足，检查原输入是否已有足够长文案
+                            if userCleanedNote.count >= 60 {
+                                await MainActor.run {
+                                    self.sniffingStatusInfo = "网页防爬受限，直接基于您输入的攻略文案（共 \(userCleanedNote.count) 字）继续解析"
+                                }
+                                contentToParse = userCleanedNote
+                            } else {
+                                throw WebSnifferError.antiCrawlerBlocked(title: sniffed.title)
+                            }
+                        }
+                    } catch let snifferErr as WebSnifferError {
+                        if userCleanedNote.count >= 60 {
+                            await MainActor.run {
+                                self.sniffingStatusInfo = "链接受限，直接基于您输入的文案（共 \(userCleanedNote.count) 字）继续解析"
+                            }
+                            contentToParse = userCleanedNote
+                        } else {
+                            await MainActor.run {
+                                self.isProcessing = false
+                                switch snifferErr {
+                                case .antiCrawlerBlocked:
+                                    self.errorMessage = """
+                                    ⚠️ 该平台链接开启了防爬机制或需要客户端验证，端侧未能直接抓取到正文。
+                                    
+                                    💡 轻松解决方案：
+                                    请在小红书/社媒 App 中打开该笔记，长按文案选择「复制文案」，然后粘贴到上方输入框，AI 即可 100% 精准为您解析路线！
+                                    """
+                                default:
+                                    self.errorMessage = "\(snifferErr.localizedDescription)。建议在社媒 App 中长按选择「复制文案」直接粘贴到输入框。"
+                                }
+                            }
+                            return
+                        }
                     } catch {
-                        // 抓取失败降级为直接解析原输入文案
+                        if userCleanedNote.count >= 60 {
+                            await MainActor.run {
+                                self.sniffingStatusInfo = "直接基于输入的文案继续解析"
+                            }
+                            contentToParse = userCleanedNote
+                        } else {
+                            await MainActor.run {
+                                self.isProcessing = false
+                                self.errorMessage = "网络连接失败，未能获取网页内容。建议直接复制笔记文案粘贴到输入框。"
+                            }
+                            return
+                        }
+                    }
+                } else {
+                    // 用户未输入任何链接，直接使用纯文案
+                    await MainActor.run {
+                        self.sniffingStatusInfo = "已读取输入的攻略文本（共 \(inputText.count) 字）"
                     }
                 }
                 

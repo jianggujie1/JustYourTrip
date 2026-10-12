@@ -155,6 +155,16 @@ JustYourTrip/
   - [x] **深度思考模型（DeepSeek-R1）推理过程可视化**：支持捕获并以折叠气泡独立展示 `reasoning_content` 思考过程；
   - [x] **超强容错 JSON 智能萃取器**：支持从混杂前言、自然对话或 Markdown 标记的流式输出中提取纯净合法的结构化 JSON，并在 DTO 层提供缺省宽容解码；
   - [x] **支持中途随时中断解析**：底层 Task 支持快速响应取消（Cancellation），按钮状态在「开始」与「中断」间自适应流转。
+- [x] **第九阶段：双引擎智能网页嗅探与社媒链接真实正文解析（Dual-Engine Web Sniffer & Real Content Extraction）**：
+  - [x] **全场景 URL 正则识别与清洗（WebSnifferService）**：支持精准识别小红书（`xhslink.com/...`）、抖音（`v.douyin.com/...`）、微信公众号、携程、马蜂窝等各类带/不带协议头网址与短链接，自动剥除末尾中文标点与多余字符；
+  - [x] **双引擎端侧抓取架构（Dual-Engine Architecture）**：
+    - **Engine 1（高速 HTTP 直连，~0.3s）**：自动跟随 302 重定向，专精萃取小红书 `window.__INITIAL_STATE__` / `__INITIAL_DATA__`、`og:description`、`<meta name="description">`、`<title>` 与去除标签后的文章真实段落正文；
+    - **Engine 2（无头 WebKit 降级兜底）**：针对重客户端 JS 渲染的 SPA 动态页面，提供 100x100 离屏真实 DOM 注入与执行，防止被 iOS WebKit 激进节流；
+  - [x] **智能社媒模版文案净化（cleanSocialBoilerplate）**：自动过滤“快来看吧！复制本条信息打开小红书 App”等模版废话，萃取真正有效的游记攻略正文；
+  - [x] **输入框实时链接感知（Live URL Perception Badge）**：用户粘贴或输入内容包含网址时，下方即刻展现绿色发光微章，明确告知已识别链接及“将自动联网抓取正文”；
+  - [x] **抓取状态透明化与反爬友好指引（Anti-Crawler Fallback & Guidance）**：
+    - 抓取成功时，流程卡片透出“已成功提取《...》（共 X 字）”；
+    - 若平台因反爬滑块拦截且用户未贴文案，立即阻断向大模型传递死链（杜绝大模型幻觉与报错），并在界面以高亮卡片给出清晰指引：“请在小红书长按文案选择「复制文案」，直接粘贴到输入框”，并附带一键重试/示例按钮。
 
 ---
 
