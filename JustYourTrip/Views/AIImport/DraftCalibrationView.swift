@@ -81,6 +81,7 @@ struct DraftCalibrationView: View {
     @State private var selectedNodeId: UUID?
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var editingNode: DraftNode?
+    @State private var pickingLocationNode: DraftNode?
 
     init(
         tripTitle: String,
@@ -146,6 +147,9 @@ struct DraftCalibrationView: View {
             }
             .sheet(item: $editingNode) { node in
                 EditDraftNodeSheet(node: node, destination: destination)
+            }
+            .sheet(item: $pickingLocationNode) { node in
+                MapLocationPickerSheet(node: node, destination: destination)
             }
         }
     }
@@ -327,6 +331,9 @@ struct DraftCalibrationView: View {
                             isSelected: selectedNodeId == node.id,
                             onEdit: {
                                 editingNode = node
+                            },
+                            onPickLocation: {
+                                pickingLocationNode = node
                             }
                         )
                         .listRowInsets(EdgeInsets(top: 5, leading: 14, bottom: 5, trailing: 14))
@@ -542,6 +549,7 @@ struct DraftNodeCardRow: View {
     let index: Int
     let isSelected: Bool
     var onEdit: () -> Void
+    var onPickLocation: () -> Void
     
     var body: some View {
         VStack(spacing: 8) {
@@ -613,16 +621,38 @@ struct DraftNodeCardRow: View {
                 
                 Spacer()
                 
-                // 编辑按钮
-                Button {
-                    HapticFeedback.light()
-                    onEdit()
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(AppTheme.sageMint)
+                // 快捷操作按钮组：地图选点 + 详情编辑
+                HStack(spacing: 6) {
+                    // 地图选点纠偏按钮
+                    Button {
+                        HapticFeedback.light()
+                        onPickLocation()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(node.isVerified ? "选点" : "地图纠偏")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(node.isVerified ? AppTheme.forestPrimary.opacity(0.1) : AppTheme.warmAmber.opacity(0.2))
+                        .foregroundStyle(node.isVerified ? AppTheme.forestPrimary : AppTheme.warmAmber)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // 详情编辑按钮
+                    Button {
+                        HapticFeedback.light()
+                        onEdit()
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(AppTheme.sageMint)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             
             // 换乘指引详细条 (若有)
@@ -724,17 +754,15 @@ struct DraftNodeCardRow: View {
 
 // MARK: - 编辑草稿节点弹窗 (EditDraftNodeSheet)
 
-// MARK: - 编辑草稿节点弹窗 (EditDraftNodeSheet)
-
 struct EditDraftNodeSheet: View {
     @Bindable var node: DraftNode
     var destination: String = ""
     @Environment(\.dismiss) private var dismiss
     
-    @State private var latString: String = ""
-    @State private var lonString: String = ""
+    // 全景地图选点浮层控制
+    @State private var showMapPicker: Bool = false
     
-    // 实时地图 POI 搜索与快速纠偏
+    // 快速 POI 搜索与纠偏
     @State private var searchQuery: String = ""
     @State private var isSearching: Bool = false
     @State private var searchResults: [MKMapItem] = []
@@ -743,13 +771,60 @@ struct EditDraftNodeSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - 地图精准搜索纠偏
+                // MARK: - 地图直观选点与校准入口
+                Section {
+                    Button {
+                        showMapPicker = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.forestPrimary.opacity(0.12))
+                                    .frame(width: 40, height: 40)
+                                Image(systemName: "map.fill")
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(AppTheme.forestPrimary)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("打开全景地图交互选点")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(Color.primary)
+                                
+                                Text(node.formattedAddress.isEmpty ? "在地图上点击落点或拖拽定位" : node.formattedAddress)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 4) {
+                                Text("选点")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(AppTheme.forestPrimary)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .padding(.vertical, 3)
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    Text("地图精准选点 (推荐)")
+                } footer: {
+                    Text("支持在全景地图中直接拖拽、点击任意位置选点，或搜索确认具体地点。")
+                        .font(.caption2)
+                }
+                
+                // MARK: - 表单内快捷搜索纠偏
                 Section {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(AppTheme.forestPrimary)
                         
-                        TextField("输入标准地标名称搜索地图纠偏", text: $searchQuery)
+                        TextField("搜索标准地标/车站（如：阿尔山火车站）", text: $searchQuery)
                             .onSubmit {
                                 performSearch()
                             }
@@ -769,7 +844,7 @@ struct EditDraftNodeSheet: View {
                         HStack(spacing: 8) {
                             ProgressView()
                                 .controlSize(.small)
-                            Text("正在检索城市地图坐标...")
+                            Text("正在检索匹配地标...")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -812,12 +887,10 @@ struct EditDraftNodeSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("地图精准搜索纠偏 (推荐)")
-                } footer: {
-                    Text("输入标准地标名称（如：东方明珠、武康大楼、安福路），点击「一键采纳」即可自动更新官方高德/苹果地图精确坐标。")
-                        .font(.caption2)
+                    Text("快捷地名搜索")
                 }
                 
+                // MARK: - 基础信息与游玩耗时
                 Section("地点与类型") {
                     TextField("地点名称", text: $node.title)
                     Picker("地点类型", selection: $node.nodeType) {
@@ -843,24 +916,45 @@ struct EditDraftNodeSheet: View {
                         .lineLimit(3...6)
                 }
                 
-                Section("当前经纬度数值") {
+                // MARK: - 坐标与地址状态展示 (免除用户手动输入)
+                Section("空间位置状态") {
                     HStack {
-                        Text("纬度 (Latitude)")
+                        Text("校准状态")
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
                         Spacer()
-                        TextField("纬度", text: $latString)
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.decimalPad)
+                        if node.isVerified {
+                            Label("已校准", systemImage: "checkmark.seal.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(AppTheme.forestPrimary)
+                        } else {
+                            Label("待校准", systemImage: "exclamationmark.triangle.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(AppTheme.warmAmber)
+                        }
                     }
+                    
                     HStack {
-                        Text("经度 (Longitude)")
+                        Text("当前坐标")
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
                         Spacer()
-                        TextField("经度", text: $lonString)
-                            .multilineTextAlignment(.trailing)
-                            .keyboardType(.decimalPad)
+                        Text(String(format: "%.5f°N, %.5f°E", node.latitude, node.longitude))
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    if !node.formattedAddress.isEmpty {
+                        HStack(alignment: .top) {
+                            Text("参考地址")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(node.formattedAddress)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
                 }
             }
@@ -869,10 +963,6 @@ struct EditDraftNodeSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
-                        if let lat = Double(latString), let lon = Double(lonString) {
-                            node.latitude = lat
-                            node.longitude = lon
-                        }
                         HapticFeedback.light()
                         dismiss()
                     }
@@ -881,9 +971,10 @@ struct EditDraftNodeSheet: View {
                 }
             }
             .onAppear {
-                latString = String(format: "%.6f", node.latitude)
-                lonString = String(format: "%.6f", node.longitude)
                 searchQuery = GeocodingService.cleanPOIKeyword(title: node.title)
+            }
+            .sheet(isPresented: $showMapPicker) {
+                MapLocationPickerSheet(node: node, destination: destination)
             }
         }
     }
@@ -901,7 +992,7 @@ struct EditDraftNodeSheet: View {
                 self.isSearching = false
                 self.searchResults = items
                 if items.isEmpty {
-                    self.searchMessage = "未在 \(destination) 附近找到匹配地点，请尝试输入更简洁的地名"
+                    self.searchMessage = "未找到“\(searchQuery)”的匹配地点，建议尝试添加城市或输入标准地名检索"
                 }
             }
         }
@@ -916,8 +1007,9 @@ struct EditDraftNodeSheet: View {
         if let name = item.name, !name.isEmpty {
             node.title = name
         }
-        latString = String(format: "%.6f", coord.latitude)
-        lonString = String(format: "%.6f", coord.longitude)
+        if let addr = item.placemark.title {
+            node.formattedAddress = addr
+        }
         searchResults = []
     }
 }

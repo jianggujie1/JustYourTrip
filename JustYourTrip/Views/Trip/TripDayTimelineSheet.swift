@@ -1,6 +1,7 @@
 import SwiftUI
 import CoreLocation
 import UIKit
+import SwiftData
 
 /// 底部联动抽屉档位定义 (折叠态 / 半屏态 / 展开态)
 enum DrawerDetent: CaseIterable, Equatable {
@@ -51,9 +52,14 @@ struct TripDayTimelineDrawer: View {
     var onNodeSelected: (RouteNode) -> Void
     var onAddNode: () -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @State private var navigatingNode: RouteNode?
     @State private var showNavigationDialog = false
     @State private var dragOffset: CGFloat = 0
+
+    @State private var nodeToDelete: RouteNode?
+    @State private var showDeleteConfirmation = false
+    @State private var editingNode: RouteNode?
 
     private var currentDay: TripDay? {
         trip.days.first(where: { $0.dayIndex == selectedDayIndex })
@@ -161,6 +167,30 @@ struct TripDayTimelineDrawer: View {
             if let target = navigatingNode {
                 Text("精准导航至：\(target.title)")
             }
+        }
+        .confirmationDialog(
+            "删除地点",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible,
+            presenting: nodeToDelete
+        ) { node in
+            Button("删除「\(node.title)」", role: .destructive) {
+                deleteNode(node)
+            }
+            Button("取消", role: .cancel) {
+                nodeToDelete = nil
+            }
+        } message: { node in
+            Text("确定从 Day \(selectedDayIndex) 中删除「\(node.title)」吗？该操作无法撤销。")
+        }
+        .sheet(item: $editingNode) { node in
+            EditNodeSheet(
+                node: node,
+                destination: trip.destination,
+                onDelete: {
+                    deleteNode(node)
+                }
+            )
         }
     }
 
@@ -382,6 +412,13 @@ struct TripDayTimelineDrawer: View {
                             onNavigate: {
                                 navigatingNode = node
                                 showNavigationDialog = true
+                            },
+                            onEdit: {
+                                editingNode = node
+                            },
+                            onDelete: {
+                                nodeToDelete = node
+                                showDeleteConfirmation = true
                             }
                         )
                         .id(node.id)
@@ -428,6 +465,27 @@ struct TripDayTimelineDrawer: View {
         .simultaneousGesture(
             drawerDetent == .collapsed ? dragGesture : nil
         )
+    }
+
+    // MARK: - 删除节点业务逻辑
+    private func deleteNode(_ node: RouteNode) {
+        guard let day = currentDay else { return }
+        HapticFeedback.warning()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            let remaining = day.sortedNodes.filter { $0.id != node.id }
+            if selectedNodeId == node.id {
+                selectedNodeId = remaining.first?.id
+            }
+            if let idx = day.nodes.firstIndex(where: { $0.id == node.id }) {
+                day.nodes.remove(at: idx)
+            }
+            modelContext.delete(node)
+            for (idx, n) in remaining.enumerated() {
+                n.sortOrder = idx
+            }
+            try? modelContext.save()
+        }
+        nodeToDelete = nil
     }
 
     // MARK: - 空状态

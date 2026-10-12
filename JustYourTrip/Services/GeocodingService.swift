@@ -48,6 +48,12 @@ final class GeocodingService {
         "西宁": CLLocationCoordinate2D(latitude: 36.6232, longitude: 101.7789),
         "银川": CLLocationCoordinate2D(latitude: 38.4872, longitude: 106.2309),
         "呼伦贝尔": CLLocationCoordinate2D(latitude: 49.2116, longitude: 119.7658),
+        "海拉尔": CLLocationCoordinate2D(latitude: 49.2116, longitude: 119.7658),
+        "满洲里": CLLocationCoordinate2D(latitude: 49.5978, longitude: 117.4452),
+        "阿尔山": CLLocationCoordinate2D(latitude: 47.1772, longitude: 119.9441),
+        "根河": CLLocationCoordinate2D(latitude: 50.7797, longitude: 121.5218),
+        "额尔古纳": CLLocationCoordinate2D(latitude: 50.2439, longitude: 120.1802),
+        "扎兰屯": CLLocationCoordinate2D(latitude: 48.0063, longitude: 122.7441),
         "香港": CLLocationCoordinate2D(latitude: 22.3193, longitude: 114.1694),
         "澳门": CLLocationCoordinate2D(latitude: 22.1987, longitude: 113.5439),
         "台北": CLLocationCoordinate2D(latitude: 25.0330, longitude: 121.5654),
@@ -146,7 +152,27 @@ final class GeocodingService {
     
     // MARK: - 3. 多层级混合地理编码与纠偏管道
     
-    /// 解析单个节点的经纬度坐标，并执行城市范围约束与离群校验
+    /// 判断地点或候选词是否具有明显的跨城/长途出发/返程/独立行政区特征
+    private static func isCrossCityOrTransitNode(title: String, searchKeyword: String?, address: String?, defaultCity: String) -> Bool {
+        let combined = "\(title) \(searchKeyword ?? "") \(address ?? "")"
+        
+        // 1. 出发、返程与交通干线标识
+        let transitKeywords = ["出发", "返程", "终点", "起点", "返京", "回程", "高速", "国道", "省道", "公路", "机场", "火车站", "高铁站", "口岸"]
+        for kw in transitKeywords {
+            if combined.contains(kw) { return true }
+        }
+        
+        // 2. 是否明确提及其他城市名称
+        for cityName in cityAnchorDatabase.keys {
+            if cityName != defaultCity && combined.contains(cityName) {
+                return true
+            }
+        }
+        
+        return false
+    }
+
+    /// 解析单个节点的经纬度坐标，自适应支持市内短途与跨省/大环线长途自驾游
     func resolveNodeCoordinate(
         title: String,
         searchKeyword: String?,
@@ -159,13 +185,14 @@ final class GeocodingService {
         nodeIndex: Int
     ) async -> ResolvedCoordinateResult {
         let cityAnchorLocation = CLLocation(latitude: cityAnchor.latitude, longitude: cityAnchor.longitude)
-        let maxAllowedRadiusMeters: CLLocationDistance = 120_000 // 允许离城市中心最大 120 公里（覆盖市郊景区如迪士尼、青浦、都江堰、长城等）
+        let isCrossCity = Self.isCrossCityOrTransitNode(title: title, searchKeyword: searchKeyword, address: estimatedAddress, defaultCity: city)
         
         // 准备检索关键词候选列
         let cleanTitle = Self.cleanPOIKeyword(title: title)
         var queryCandidates: [String] = []
         if let kw = searchKeyword, !kw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            queryCandidates.append(kw.trimmingCharacters(in: .whitespacesAndNewlines))
+            let trimmed = kw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !queryCandidates.contains(trimmed) { queryCandidates.append(trimmed) }
         }
         if !queryCandidates.contains(cleanTitle) {
             queryCandidates.append(cleanTitle)
@@ -178,79 +205,115 @@ final class GeocodingService {
         }
         
         // -------------------------------------------------------------
-        // Tier 1: 苹果地图原生 POI 检索 (MKLocalSearch + 城市 Region 约束)
+        // Tier 1: 本地优先检索 (针对同城景点，利用 cityAnchor 缩小同名歧义)
         // -------------------------------------------------------------
-        let region = MKCoordinateRegion(center: cityAnchor, latitudinalMeters: 80_000, longitudinalMeters: 80_000)
+        if !isCrossCity {
+            let region = MKCoordinateRegion(center: cityAnchor, latitudinalMeters: 100_000, longitudinalMeters: 100_000)
+            for candidate in queryCandidates {
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = candidate
+                request.region = region
+                let localSearch = MKLocalSearch(request: request)
+                
+                if let response = try? await localSearch.start(), let firstItem = response.mapItems.first {
+                    let coord = firstItem.placemark.coordinate
+                    let itemLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+                    let distance = itemLocation.distance(from: cityAnchorLocation)
+                    
+                    // 同城检索放宽至 150 公里以内
+                    if distance <= 150_000 {
+                        let addr = firstItem.placemark.title ?? firstItem.name ?? ""
+                        return ResolvedCoordinateResult(
+                            coordinate: coord,
+                            isVerified: true,
+                            formattedAddress: addr,
+                            sourceMethod: "MKLocalSearch"
+                        )
+                    }
+                }
+            }
+        }
+        
+        // -------------------------------------------------------------
+        // Tier 2: 全域/全国原生 POI 检索 (支持跨城自驾、长途出发/返程与全国知名景区)
+        // -------------------------------------------------------------
         for candidate in queryCandidates {
             let request = MKLocalSearch.Request()
             request.naturalLanguageQuery = candidate
-            request.region = region
+            // 不设置 region 限制，系统在全域范围内寻找权威匹配
             let localSearch = MKLocalSearch(request: request)
             
             if let response = try? await localSearch.start(), let firstItem = response.mapItems.first {
                 let coord = firstItem.placemark.coordinate
-                let itemLocation = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
-                let distance = itemLocation.distance(from: cityAnchorLocation)
-                
-                // 确保结果在城市合理半径范围内，杜绝跨省同名漂移
-                if distance <= maxAllowedRadiusMeters {
+                if CLLocationCoordinate2DIsValid(coord) && abs(coord.latitude) > 0.1 && abs(coord.longitude) > 0.1 {
                     let addr = firstItem.placemark.title ?? firstItem.name ?? ""
                     return ResolvedCoordinateResult(
                         coordinate: coord,
                         isVerified: true,
                         formattedAddress: addr,
-                        sourceMethod: "MKLocalSearch"
+                        sourceMethod: "MKLocalSearchNationwide"
                     )
                 }
             }
         }
         
         // -------------------------------------------------------------
-        // Tier 2: CLGeocoder 地址反查 (配合城市前缀与距离校验)
+        // Tier 3: CLGeocoder 地址反查 (优先候选词本身，不强绑单一城市)
         // -------------------------------------------------------------
         for candidate in queryCandidates {
-            let searchString = candidate.contains(city) ? candidate : "\(city) \(candidate)"
-            if let placemarks = try? await geocoder.geocodeAddressString(searchString),
+            // 直接检索候选词
+            if let placemarks = try? await geocoder.geocodeAddressString(candidate),
                let location = placemarks.first?.location {
-                let coord = location.coordinate
-                let distance = location.distance(from: cityAnchorLocation)
-                
-                if distance <= maxAllowedRadiusMeters {
+                let mark = placemarks.first!
+                let addr = [mark.administrativeArea, mark.locality, mark.subLocality, mark.thoroughfare, mark.name]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
+                return ResolvedCoordinateResult(
+                    coordinate: location.coordinate,
+                    isVerified: true,
+                    formattedAddress: addr,
+                    sourceMethod: "CLGeocoderDirect"
+                )
+            }
+            
+            // 仅在非跨城且未包含城市名时，尝试补全默认城市
+            if !isCrossCity && !candidate.contains(city) {
+                let searchString = "\(city) \(candidate)"
+                if let placemarks = try? await geocoder.geocodeAddressString(searchString),
+                   let location = placemarks.first?.location {
                     let mark = placemarks.first!
                     let addr = [mark.administrativeArea, mark.locality, mark.subLocality, mark.thoroughfare, mark.name]
                         .compactMap { $0 }
                         .joined(separator: " ")
                     return ResolvedCoordinateResult(
-                        coordinate: coord,
+                        coordinate: location.coordinate,
                         isVerified: true,
                         formattedAddress: addr,
-                        sourceMethod: "CLGeocoder"
+                        sourceMethod: "CLGeocoderCity"
                     )
                 }
             }
         }
         
         // -------------------------------------------------------------
-        // Tier 3: AI 大模型先验估算坐标 (仅在符合城市半径时采纳)
+        // Tier 4: AI 大模型真实先验估算坐标 (尊重 AI 在公路/草原/偏远景区的先验)
         // -------------------------------------------------------------
-        if let lat = aiLat, let lon = aiLon, abs(lat) > 0.1 && abs(lon) > 0.1 {
-            let aiLocation = CLLocation(latitude: lat, longitude: lon)
-            let distance = aiLocation.distance(from: cityAnchorLocation)
-            if distance <= 80_000 {
-                return ResolvedCoordinateResult(
-                    coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    isVerified: true,
-                    formattedAddress: "AI 先验位置",
-                    sourceMethod: "AIPrior"
-                )
-            }
+        if let lat = aiLat, let lon = aiLon,
+           (-90.0...90.0).contains(lat),
+           (-180.0...180.0).contains(lon),
+           (abs(lat) > 0.5 && abs(lon) > 0.5) {
+            return ResolvedCoordinateResult(
+                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                isVerified: true,
+                formattedAddress: estimatedAddress ?? "AI 先验位置",
+                sourceMethod: "AIPrior"
+            )
         }
         
         // -------------------------------------------------------------
-        // Tier 4: 本地微分散兜底 (基于前序站点或城市锚点，杜绝几个点堆叠重合)
+        // Tier 5: 本地微分散兜底 (待人工校准)
         // -------------------------------------------------------------
         let anchor = fallbackCoord ?? cityAnchor
-        // 计算微分散量 (~300 - 600 米半径)，避免多点完全重合在同一像素
         let angle = Double(nodeIndex) * 1.05
         let radiusDeg = 0.003 + (Double(nodeIndex % 4) * 0.0015)
         let dispersedLat = anchor.latitude + sin(angle) * radiusDeg
@@ -259,32 +322,18 @@ final class GeocodingService {
         return ResolvedCoordinateResult(
             coordinate: CLLocationCoordinate2D(latitude: dispersedLat, longitude: dispersedLon),
             isVerified: false,
-            formattedAddress: "\(city) (待人工校准)",
+            formattedAddress: "\(cleanTitle) (待人工校准)",
             sourceMethod: "FallbackVicinity"
         )
     }
     
-    // MARK: - 4. 整路线拓扑校验与防重合/离群纠偏 (Post-processing)
+    // MARK: - 4. 整路线拓扑校验与防重合/微位移 (Post-processing)
     
-    /// 对整趟行程的所有草稿节点进行全局拓扑健康度检查：
-    /// 1. 消除同日/相近节点的坐标重合现象；
-    /// 2. 强制拉回偏离城市中心的离群点。
+    /// 对整趟行程的所有草稿节点进行防重叠校验：
+    /// 若同一日内多个节点物理坐标完全重合（< 20米），施加细微分散偏移避免地图点完全堆叠
     func disambiguateAndSanitize(days: inout [DraftDay], cityAnchor: CLLocationCoordinate2D) {
-        let cityAnchorLoc = CLLocation(latitude: cityAnchor.latitude, longitude: cityAnchor.longitude)
-        let maxRadius: CLLocationDistance = 120_000
-        
         for day in days {
-            // 1. 离群点拉回检测
-            for node in day.nodes {
-                let nodeLoc = CLLocation(latitude: node.latitude, longitude: node.longitude)
-                if nodeLoc.distance(from: cityAnchorLoc) > maxRadius {
-                    // 严重偏离（如几千公里外的外省），拉回至城市中心附近微分散位置
-                    node.latitude = cityAnchor.latitude + Double.random(in: -0.015...0.015)
-                    node.longitude = cityAnchor.longitude + Double.random(in: -0.015...0.015)
-                }
-            }
-            
-            // 2. 节点重合检测与微位移消重 (若两节点距离 < 20 米且标题不同，则施加微分散)
+            // 节点重合检测与微位移消重 (若两节点距离 < 20 米且标题不同，则施加微分散)
             for i in 0..<day.nodes.count {
                 for j in (i + 1)..<day.nodes.count {
                     let nodeA = day.nodes[i]
@@ -306,22 +355,29 @@ final class GeocodingService {
     
     // MARK: - 5. 人机交互搜索建议 (供 EditDraftNodeSheet 实时搜索重置)
     
-    /// 在指定城市区域内实时搜索 POI 候选
+    /// 实时搜索 POI 候选：优先指定城市区域，若无结果自适应扩展至全国全域
     func searchPOISuggestions(query: String, cityAnchor: CLLocationCoordinate2D) async -> [MKMapItem] {
         let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanQuery.isEmpty else { return [] }
         
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = cleanQuery
-        request.region = MKCoordinateRegion(center: cityAnchor, latitudinalMeters: 50_000, longitudinalMeters: 50_000)
-        
-        let search = MKLocalSearch(request: request)
-        do {
-            let response = try await search.start()
+        // 1. 先在指定城市区域内尝试检索
+        let localRequest = MKLocalSearch.Request()
+        localRequest.naturalLanguageQuery = cleanQuery
+        localRequest.region = MKCoordinateRegion(center: cityAnchor, latitudinalMeters: 60_000, longitudinalMeters: 60_000)
+        let localSearch = MKLocalSearch(request: localRequest)
+        if let response = try? await localSearch.start(), !response.mapItems.isEmpty {
             return response.mapItems
-        } catch {
-            return []
         }
+        
+        // 2. 城市未命中时，全国/全域范围检索
+        let globalRequest = MKLocalSearch.Request()
+        globalRequest.naturalLanguageQuery = cleanQuery
+        let globalSearch = MKLocalSearch(request: globalRequest)
+        if let response = try? await globalSearch.start() {
+            return response.mapItems
+        }
+        
+        return []
     }
     
     // MARK: - 6. 逆地理编码

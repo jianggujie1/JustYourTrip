@@ -182,7 +182,7 @@ final class LLMParserService: Sendable {
         必须严格输出合法的 JSON 格式，字段定义如下：
         {
           "tripTitle": "行程名称",
-          "destination": "目的地城市（如：上海、北京、成都、东京）",
+          "destination": "目的地或路线主题（如：上海、北京、成都、东京、呼伦贝尔大环线、川西自驾）",
           "days": [
             {
               "dayIndex": 1,
@@ -190,13 +190,13 @@ final class LLMParserService: Sendable {
               "nodes": [
                 {
                   "title": "地点/站名/口名",
-                  "searchKeyword": "适合在地图中精准检索的标准POI名称（务必去除'打卡'、'吃Brunch'、'看展'、'脚下三件套'等口语修饰词，如'东方明珠广播电视塔'、'武康大楼'、'安福路'、'陆家嘴地铁站'）",
-                  "estimatedAddress": "大概地址或所在区域",
+                  "searchKeyword": "适合在地图中精准检索的标准POI名称（如'北京大兴国际机场'、'阿尔山国家森林公园'、'满洲里套娃景区'、'东方明珠广播电视塔'，务必去除'打卡'、'吃Brunch'、'看展'等口语修饰词）",
+                  "estimatedAddress": "省市区县及具体地址描述（跨城/自驾游请务必标明具体城市或旗县，如'北京市'、'内蒙古兴安盟阿尔山市'、'呼伦贝尔市满洲里市'）",
                   "estimatedLatitude": 31.2397,
                   "estimatedLongitude": 121.4998,
                   "nodeType": "attraction | restaurant | hotel | transitBus | transitSub | parkingLot | other",
                   "incomingTransit": "walking | driving | transit",
-                  "incomingGuide": "到达此处的交通换乘提示（例如：乘地铁2号线往浦东机场方向，坐3站至陆家嘴站C口出）",
+                  "incomingGuide": "到达此处的交通换乘提示（例如：乘地铁2号线往浦东机场方向，坐3站至陆家嘴站C口出；自驾经G45转G10）",
                   "tips": "游玩建议/避坑提醒/预约门票说明",
                   "durationMinutes": 60
                 }
@@ -206,10 +206,11 @@ final class LLMParserService: Sendable {
           "suggestedChecklist": ["特需必备物品1", "特需必备物品2"]
         }
         注意：
-        1. 必须识别并保留公交站、地铁出口、停车场等中转节点作为独立 node，并将 nodeType 准确设置为 transitBus、transitSub 或 parkingLot。
+        1. 必须识别并保留公交站、地铁出口、停车场、自驾起点/服务区等中转节点作为独立 node，并将 nodeType 准确设置为 transitBus、transitSub、parkingLot 或 other。
         2. 节点间的换乘指示填写在 incomingGuide 中。
-        3. searchKeyword 必须输出适合调用苹果地图/高德地图搜索的标准地名，去除任何冗余游玩动作描述；同时尽量给出该景点的真实先验估算坐标 (estimatedLatitude, estimatedLongitude) 辅助校准定位。
-        4. 请直接输出符合上述规范的有效 JSON 文本。
+        3. searchKeyword 必须输出适合调用苹果地图/高德地图搜索的标准地名；如果行程跨越多个城市或为长途自驾，请附带该地所属具体市/县/旗名以避免跨省同名歧义。
+        4. estimatedLatitude 和 estimatedLongitude 必须根据各节点的真实地理位置给出估算经纬度，严禁所有跨城节点填写同一城市坐标（例如北京节点须为北京经纬度约39.9, 116.4，满洲里节点须为满洲里经纬度约49.6, 117.4）。
+        5. 请直接输出符合上述规范的有效 JSON 文本。
         """
         
         var requestBody: [String: Any] = [

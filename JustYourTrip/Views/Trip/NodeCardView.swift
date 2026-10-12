@@ -9,6 +9,8 @@ struct NodeCardView: View {
     let isSelected: Bool
     var onSelect: () -> Void
     var onNavigate: () -> Void
+    var onEdit: (() -> Void)? = nil
+    var onDelete: (() -> Void)? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -171,6 +173,38 @@ struct NodeCardView: View {
                     .foregroundStyle(.secondary)
                     .clipShape(Capsule())
                 }
+                
+                // 更多操作菜单 (编辑 / 删除)
+                if onEdit != nil || onDelete != nil {
+                    Menu {
+                        if let onEdit = onEdit {
+                            Button {
+                                HapticFeedback.light()
+                                onEdit()
+                            } label: {
+                                Label("编辑地点信息", systemImage: "pencil")
+                            }
+                        }
+                        
+                        if let onDelete = onDelete {
+                            Divider()
+                            
+                            Button(role: .destructive) {
+                                onDelete()
+                            } label: {
+                                Label("删除此地点", systemImage: "trash")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.secondary.opacity(0.65))
+                            .frame(width: 24, height: 24)
+                            .background(Color.primary.opacity(0.05))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             
             // 避坑便签卡片 (仿手账贴纸风格)
@@ -248,6 +282,43 @@ struct NodeCardView: View {
         .onTapGesture {
             HapticFeedback.selection()
             onSelect()
+        }
+        .contextMenu {
+            if let onEdit = onEdit {
+                Button {
+                    HapticFeedback.light()
+                    onEdit()
+                } label: {
+                    Label("编辑地点信息", systemImage: "pencil")
+                }
+            }
+            
+            Button {
+                HapticFeedback.success()
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    node.isVisited.toggle()
+                    node.visitedAt = node.isVisited ? Date() : nil
+                }
+            } label: {
+                Label(node.isVisited ? "取消打卡" : "标记打卡", systemImage: node.isVisited ? "circle" : "checkmark.circle")
+            }
+            
+            Button {
+                HapticFeedback.light()
+                onNavigate()
+            } label: {
+                Label("导航前往", systemImage: "arrow.triangle.turn.up.right.diamond")
+            }
+            
+            if let onDelete = onDelete {
+                Divider()
+                
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("删除此地点", systemImage: "trash")
+                }
+            }
         }
     }
     
