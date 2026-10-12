@@ -715,14 +715,18 @@ struct AIImportSheet: View {
                 
                 try Task.checkCancellation()
                 
-                // 步骤 3：原生地理编码反查所有节点坐标
+                // 步骤 3：原生地理编码反查所有节点坐标 (融合城市基准锚点、MapKit POI、AI先验与防离群纠偏)
                 await MainActor.run {
                     currentStep = .geocoding
+                    geocodingInfo = "正在锁定 \(dto.destination) 城市空间基准..."
                 }
+                
+                let cityAnchor = await GeocodingService.shared.resolveCityAnchor(destination: dto.destination)
                 
                 var draftDays: [DraftDay] = []
                 let totalNodesCount = dto.days.reduce(0) { $0 + $1.nodes.count }
                 var currentNodeIndex = 0
+                var lastResolvedCoord: CLLocationCoordinate2D = cityAnchor
                 
                 for dayDTO in dto.days {
                     var draftNodes: [DraftNode] = []
@@ -739,28 +743,41 @@ struct AIImportSheet: View {
                         let nodeType = NodeType(rawValue: nodeDTO.nodeType) ?? .attraction
                         let transitType = TransitType(rawValue: nodeDTO.incomingTransit) ?? .walking
                         
-                        var coord = CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737)
-                        if let resolvedCoord = try? await GeocodingService.shared.geocode(
-                            locationName: nodeDTO.title,
-                            city: dto.destination
-                        ) {
-                            coord = resolvedCoord
+                        let resolved = await GeocodingService.shared.resolveNodeCoordinate(
+                            title: nodeDTO.title,
+                            searchKeyword: nodeDTO.searchKeyword,
+                            estimatedAddress: nodeDTO.estimatedAddress,
+                            city: dto.destination,
+                            cityAnchor: cityAnchor,
+                            aiLat: nodeDTO.estimatedLatitude,
+                            aiLon: nodeDTO.estimatedLongitude,
+                            fallbackCoord: lastResolvedCoord,
+                            nodeIndex: currentIndex
+                        )
+                        
+                        if resolved.isVerified {
+                            lastResolvedCoord = resolved.coordinate
                         }
                         
                         let draftNode = DraftNode(
                             title: nodeDTO.title,
-                            latitude: coord.latitude,
-                            longitude: coord.longitude,
+                            latitude: resolved.coordinate.latitude,
+                            longitude: resolved.coordinate.longitude,
                             nodeType: nodeType,
                             incomingTransit: transitType,
                             incomingGuide: nodeDTO.incomingGuide ?? "",
                             tips: nodeDTO.tips ?? "",
-                            durationMinutes: nodeDTO.durationMinutes ?? 60
+                            durationMinutes: nodeDTO.durationMinutes ?? 60,
+                            isVerified: resolved.isVerified,
+                            formattedAddress: resolved.formattedAddress
                         )
                         draftNodes.append(draftNode)
                     }
                     draftDays.append(DraftDay(dayIndex: dayDTO.dayIndex, summary: dayDTO.summary, nodes: draftNodes))
                 }
+                
+                // 执行整趟行程的拓扑防重叠微分散与离群拉回检测
+                GeocodingService.shared.disambiguateAndSanitize(days: &draftDays, cityAnchor: cityAnchor)
                 
                 try Task.checkCancellation()
                 

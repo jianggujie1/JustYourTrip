@@ -14,6 +14,8 @@ final class DraftNode: Identifiable {
     var incomingGuide: String
     var tips: String
     var durationMinutes: Int
+    var isVerified: Bool
+    var formattedAddress: String
     
     var coordinate: CLLocationCoordinate2D {
         get { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
@@ -31,7 +33,9 @@ final class DraftNode: Identifiable {
         incomingTransit: TransitType = .walking,
         incomingGuide: String = "",
         tips: String = "",
-        durationMinutes: Int = 60
+        durationMinutes: Int = 60,
+        isVerified: Bool = true,
+        formattedAddress: String = ""
     ) {
         self.title = title
         self.latitude = latitude
@@ -41,6 +45,8 @@ final class DraftNode: Identifiable {
         self.incomingGuide = incomingGuide
         self.tips = tips
         self.durationMinutes = durationMinutes
+        self.isVerified = isVerified
+        self.formattedAddress = formattedAddress
     }
 }
 
@@ -139,7 +145,7 @@ struct DraftCalibrationView: View {
                 fitMapToCurrentDay()
             }
             .sheet(item: $editingNode) { node in
-                EditDraftNodeSheet(node: node)
+                EditDraftNodeSheet(node: node, destination: destination)
             }
         }
     }
@@ -575,6 +581,21 @@ struct DraftNodeCardRow: View {
                         .background(badgeColor.opacity(0.12))
                         .foregroundStyle(badgeColor)
                         .clipShape(Capsule())
+                        
+                        // 待校准微标
+                        if !node.isVerified {
+                            HStack(spacing: 3) {
+                                Image(systemName: "mappin.slash")
+                                    .font(.system(size: 8))
+                                Text("待校准")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(AppTheme.warmAmber.opacity(0.12))
+                            .foregroundStyle(AppTheme.warmAmber)
+                            .clipShape(Capsule())
+                        }
                     }
                     
                     HStack(spacing: 8) {
@@ -703,16 +724,100 @@ struct DraftNodeCardRow: View {
 
 // MARK: - 编辑草稿节点弹窗 (EditDraftNodeSheet)
 
+// MARK: - 编辑草稿节点弹窗 (EditDraftNodeSheet)
+
 struct EditDraftNodeSheet: View {
     @Bindable var node: DraftNode
+    var destination: String = ""
     @Environment(\.dismiss) private var dismiss
     
     @State private var latString: String = ""
     @State private var lonString: String = ""
+    
+    // 实时地图 POI 搜索与快速纠偏
+    @State private var searchQuery: String = ""
+    @State private var isSearching: Bool = false
+    @State private var searchResults: [MKMapItem] = []
+    @State private var searchMessage: String? = nil
 
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: - 地图精准搜索纠偏
+                Section {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(AppTheme.forestPrimary)
+                        
+                        TextField("输入标准地标名称搜索地图纠偏", text: $searchQuery)
+                            .onSubmit {
+                                performSearch()
+                            }
+                        
+                        if !searchQuery.isEmpty {
+                            Button("搜索") {
+                                performSearch()
+                            }
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppTheme.forestPrimary)
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    
+                    if isSearching {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("正在检索城市地图坐标...")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    } else if !searchResults.isEmpty {
+                        ForEach(searchResults, id: \.self) { item in
+                            Button {
+                                applyMapItem(item)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(AppTheme.forestPrimary)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.name ?? "未知位置")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundStyle(Color.primary)
+                                        
+                                        if let subtitle = item.placemark.title {
+                                            Text(subtitle)
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text("一键采纳")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(AppTheme.sageMint)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } else if let msg = searchMessage {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("地图精准搜索纠偏 (推荐)")
+                } footer: {
+                    Text("输入标准地标名称（如：东方明珠、武康大楼、安福路），点击「一键采纳」即可自动更新官方高德/苹果地图精确坐标。")
+                        .font(.caption2)
+                }
+                
                 Section("地点与类型") {
                     TextField("地点名称", text: $node.title)
                     Picker("地点类型", selection: $node.nodeType) {
@@ -738,7 +843,7 @@ struct EditDraftNodeSheet: View {
                         .lineLimit(3...6)
                 }
                 
-                Section("经纬度坐标微调 (反查校验)") {
+                Section("当前经纬度数值") {
                     HStack {
                         Text("纬度 (Latitude)")
                             .font(.system(size: 13))
@@ -759,7 +864,7 @@ struct EditDraftNodeSheet: View {
                     }
                 }
             }
-            .navigationTitle("微调节点信息")
+            .navigationTitle("微调节点与纠偏")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -778,7 +883,41 @@ struct EditDraftNodeSheet: View {
             .onAppear {
                 latString = String(format: "%.6f", node.latitude)
                 lonString = String(format: "%.6f", node.longitude)
+                searchQuery = GeocodingService.cleanPOIKeyword(title: node.title)
             }
         }
+    }
+    
+    private func performSearch() {
+        guard !searchQuery.isEmpty else { return }
+        isSearching = true
+        searchMessage = nil
+        searchResults = []
+        
+        Task {
+            let anchor = await GeocodingService.shared.resolveCityAnchor(destination: destination)
+            let items = await GeocodingService.shared.searchPOISuggestions(query: searchQuery, cityAnchor: anchor)
+            await MainActor.run {
+                self.isSearching = false
+                self.searchResults = items
+                if items.isEmpty {
+                    self.searchMessage = "未在 \(destination) 附近找到匹配地点，请尝试输入更简洁的地名"
+                }
+            }
+        }
+    }
+    
+    private func applyMapItem(_ item: MKMapItem) {
+        HapticFeedback.success()
+        let coord = item.placemark.coordinate
+        node.latitude = coord.latitude
+        node.longitude = coord.longitude
+        node.isVerified = true
+        if let name = item.name, !name.isEmpty {
+            node.title = name
+        }
+        latString = String(format: "%.6f", coord.latitude)
+        lonString = String(format: "%.6f", coord.longitude)
+        searchResults = []
     }
 }

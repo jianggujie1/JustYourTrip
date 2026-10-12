@@ -33,7 +33,10 @@ struct ParsedTripDTO: Codable {
     
     struct ParsedNodeDTO: Codable {
         var title: String
+        var searchKeyword: String?
         var estimatedAddress: String?
+        var estimatedLatitude: Double?
+        var estimatedLongitude: Double?
         var nodeType: String // attraction, restaurant, hotel, transitBus, transitSub, parkingLot, other
         var incomingTransit: String // walking, driving, transit
         var incomingGuide: String?
@@ -41,12 +44,15 @@ struct ParsedTripDTO: Codable {
         var durationMinutes: Int?
         
         enum CodingKeys: String, CodingKey {
-            case title, estimatedAddress, nodeType, incomingTransit, incomingGuide, tips, durationMinutes
+            case title, searchKeyword, estimatedAddress, estimatedLatitude, estimatedLongitude, nodeType, incomingTransit, incomingGuide, tips, durationMinutes
         }
         
         init(
             title: String,
+            searchKeyword: String? = nil,
             estimatedAddress: String? = nil,
+            estimatedLatitude: Double? = nil,
+            estimatedLongitude: Double? = nil,
             nodeType: String = "attraction",
             incomingTransit: String = "walking",
             incomingGuide: String? = nil,
@@ -54,7 +60,10 @@ struct ParsedTripDTO: Codable {
             durationMinutes: Int? = 60
         ) {
             self.title = title
+            self.searchKeyword = searchKeyword
             self.estimatedAddress = estimatedAddress
+            self.estimatedLatitude = estimatedLatitude
+            self.estimatedLongitude = estimatedLongitude
             self.nodeType = nodeType
             self.incomingTransit = incomingTransit
             self.incomingGuide = incomingGuide
@@ -65,7 +74,26 @@ struct ParsedTripDTO: Codable {
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.title = (try? container.decode(String.self, forKey: .title)) ?? "未知地点"
+            self.searchKeyword = try? container.decodeIfPresent(String.self, forKey: .searchKeyword)
             self.estimatedAddress = try? container.decodeIfPresent(String.self, forKey: .estimatedAddress)
+            
+            // 宽容解码经纬度 (兼容浮点数与字符串)
+            if let lat = try? container.decodeIfPresent(Double.self, forKey: .estimatedLatitude) {
+                self.estimatedLatitude = lat
+            } else if let latStr = try? container.decodeIfPresent(String.self, forKey: .estimatedLatitude), let latVal = Double(latStr) {
+                self.estimatedLatitude = latVal
+            } else {
+                self.estimatedLatitude = nil
+            }
+            
+            if let lon = try? container.decodeIfPresent(Double.self, forKey: .estimatedLongitude) {
+                self.estimatedLongitude = lon
+            } else if let lonStr = try? container.decodeIfPresent(String.self, forKey: .estimatedLongitude), let lonVal = Double(lonStr) {
+                self.estimatedLongitude = lonVal
+            } else {
+                self.estimatedLongitude = nil
+            }
+            
             self.nodeType = (try? container.decode(String.self, forKey: .nodeType)) ?? "attraction"
             self.incomingTransit = (try? container.decode(String.self, forKey: .incomingTransit)) ?? "walking"
             self.incomingGuide = try? container.decodeIfPresent(String.self, forKey: .incomingGuide)
@@ -76,7 +104,10 @@ struct ParsedTripDTO: Codable {
         func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(title, forKey: .title)
+            try container.encodeIfPresent(searchKeyword, forKey: .searchKeyword)
             try container.encodeIfPresent(estimatedAddress, forKey: .estimatedAddress)
+            try container.encodeIfPresent(estimatedLatitude, forKey: .estimatedLatitude)
+            try container.encodeIfPresent(estimatedLongitude, forKey: .estimatedLongitude)
             try container.encode(nodeType, forKey: .nodeType)
             try container.encode(incomingTransit, forKey: .incomingTransit)
             try container.encodeIfPresent(incomingGuide, forKey: .incomingGuide)
@@ -151,7 +182,7 @@ final class LLMParserService: Sendable {
         必须严格输出合法的 JSON 格式，字段定义如下：
         {
           "tripTitle": "行程名称",
-          "destination": "目的地城市（如：上海、北京、东京）",
+          "destination": "目的地城市（如：上海、北京、成都、东京）",
           "days": [
             {
               "dayIndex": 1,
@@ -159,7 +190,10 @@ final class LLMParserService: Sendable {
               "nodes": [
                 {
                   "title": "地点/站名/口名",
+                  "searchKeyword": "适合在地图中精准检索的标准POI名称（务必去除'打卡'、'吃Brunch'、'看展'、'脚下三件套'等口语修饰词，如'东方明珠广播电视塔'、'武康大楼'、'安福路'、'陆家嘴地铁站'）",
                   "estimatedAddress": "大概地址或所在区域",
+                  "estimatedLatitude": 31.2397,
+                  "estimatedLongitude": 121.4998,
                   "nodeType": "attraction | restaurant | hotel | transitBus | transitSub | parkingLot | other",
                   "incomingTransit": "walking | driving | transit",
                   "incomingGuide": "到达此处的交通换乘提示（例如：乘地铁2号线往浦东机场方向，坐3站至陆家嘴站C口出）",
@@ -174,7 +208,8 @@ final class LLMParserService: Sendable {
         注意：
         1. 必须识别并保留公交站、地铁出口、停车场等中转节点作为独立 node，并将 nodeType 准确设置为 transitBus、transitSub 或 parkingLot。
         2. 节点间的换乘指示填写在 incomingGuide 中。
-        3. 请直接输出符合上述规范的有效 JSON 文本。
+        3. searchKeyword 必须输出适合调用苹果地图/高德地图搜索的标准地名，去除任何冗余游玩动作描述；同时尽量给出该景点的真实先验估算坐标 (estimatedLatitude, estimatedLongitude) 辅助校准定位。
+        4. 请直接输出符合上述规范的有效 JSON 文本。
         """
         
         var requestBody: [String: Any] = [
