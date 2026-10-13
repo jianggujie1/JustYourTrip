@@ -43,8 +43,11 @@ for fname, rpath in swift_files:
 
 info_plist_entry = (resource_files[0][0], resource_files[0][1], gen_id(), None)
 
-# Group structure: JustYourTrip root group
-group_children_ids = [e[2] for e in file_entries] + [info_plist_entry[2]]
+xcassets_dir = os.path.join(source_root, "Resources", "Assets.xcassets")
+xcassets_entry = None
+if os.path.exists(xcassets_dir):
+    rel_path = os.path.relpath(xcassets_dir, root_dir)
+    xcassets_entry = ("Assets.xcassets", rel_path, gen_id(), gen_id())
 
 # App product reference
 product_ref_id = gen_id()
@@ -54,15 +57,20 @@ products_group_id = gen_id()
 build_files_str = ""
 for fname, rpath, f_id, b_id in file_entries:
     build_files_str += f"\t\t{b_id} /* {fname} in Sources */ = {{isa = PBXBuildFile; fileRef = {f_id} /* {fname} */; }};\n"
+if xcassets_entry:
+    build_files_str += f"\t\t{xcassets_entry[3]} /* {xcassets_entry[0]} in Resources */ = {{isa = PBXBuildFile; fileRef = {xcassets_entry[2]} /* {xcassets_entry[0]} */; }};\n"
 
 # Build PBXFileReference section
 file_refs_str = ""
 for fname, rpath, f_id, b_id in file_entries:
     file_refs_str += f"\t\t{f_id} /* {fname} */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = \"{rpath}\"; sourceTree = \"<group>\"; }};\n"
 file_refs_str += f"\t\t{info_plist_entry[2]} /* Info.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = \"{info_plist_entry[1]}\"; sourceTree = \"<group>\"; }};\n"
+if xcassets_entry:
+    file_refs_str += f"\t\t{xcassets_entry[2]} /* {xcassets_entry[0]} */ = {{isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = \"{xcassets_entry[1]}\"; sourceTree = \"<group>\"; }};\n"
 file_refs_str += f"\t\t{product_ref_id} /* {project_name}.app */ = {{isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = {project_name}.app; sourceTree = BUILT_PRODUCTS_DIR; }};\n"
 
 sources_str = "".join([f"\t\t\t\t{e[3]} /* {e[0]} in Sources */,\n" for e in file_entries])
+resources_str = f"\t\t\t\t{xcassets_entry[3]} /* {xcassets_entry[0]} in Resources */,\n" if xcassets_entry else ""
 
 pbxproj_content = f"""// !$*UTF8*$!
 {{
@@ -98,6 +106,8 @@ pbxproj_content = f"""// !$*UTF8*$!
 for fname, rpath, f_id, b_id in file_entries:
     pbxproj_content += f"\t\t\t\t{f_id} /* {fname} */,\n"
 pbxproj_content += f"\t\t\t\t{info_plist_entry[2]} /* Info.plist */,\n"
+if xcassets_entry:
+    pbxproj_content += f"\t\t\t\t{xcassets_entry[2]} /* {xcassets_entry[0]} */,\n"
 
 pbxproj_content += f"""			);
 			sourceTree = "<group>";
@@ -168,7 +178,7 @@ pbxproj_content += f"""			);
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
+{resources_str}			);
 			runOnlyForDeploymentPostprocessing = 0;
 		}};
 /* End PBXResourcesBuildPhase section */
