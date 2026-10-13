@@ -11,6 +11,7 @@ struct AddTripSheet: View {
     @State private var startDate: Date = Date()
     @State private var endDate: Date = Calendar.current.date(byAdding: .day, value: 2, to: Date()) ?? Date()
     @State private var notes: String = ""
+    @State private var outfitAdvice: String = ""
     @State private var selectedVibes: Set<String> = ["🏙️ 城市漫步", "📸 地标巡礼"]
     
     private let availableVibes = [
@@ -69,6 +70,11 @@ struct AddTripSheet: View {
                     TextField("备注同行伙伴、核心期待或行前灵感...", text: $notes, axis: .vertical)
                         .lineLimit(3...5)
                 }
+
+                Section("穿衣推荐与穿搭建议 (可选)") {
+                    TextField("如：早晚温差大备外套、平底健步鞋、浅色系出片...", text: $outfitAdvice, axis: .vertical)
+                        .lineLimit(2...4)
+                }
             }
             .navigationTitle("新建行程")
             .navigationBarTitleDisplayMode(.inline)
@@ -94,7 +100,8 @@ struct AddTripSheet: View {
             startDate: startDate,
             endDate: endDate,
             notes: notes,
-            vibeTags: Array(selectedVibes)
+            vibeTags: Array(selectedVibes),
+            outfitAdvice: outfitAdvice
         )
         modelContext.insert(trip)
         

@@ -8,6 +8,7 @@ final class TripDay {
     var dayIndex: Int = 1 // 第几天 (Day 1, Day 2...)
     var date: Date = Date()
     var summary: String = ""
+    var outfitAdvice: String = "" // 当日专属穿衣建议 (可选，未设置时遵循行程总体穿衣指南)
     
     var trip: TripPlan?
     
@@ -15,11 +16,12 @@ final class TripDay {
     @Relationship(deleteRule: .cascade, inverse: \RouteNode.day)
     var nodes: [RouteNode] = []
     
-    init(dayIndex: Int, date: Date, summary: String = "") {
+    init(dayIndex: Int, date: Date, summary: String = "", outfitAdvice: String = "") {
         self.id = UUID()
         self.dayIndex = dayIndex
         self.date = date
         self.summary = summary
+        self.outfitAdvice = outfitAdvice
     }
     
     /// 按顺序排列的节点列表

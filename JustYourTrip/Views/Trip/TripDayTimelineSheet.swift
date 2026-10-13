@@ -64,6 +64,7 @@ struct TripDayTimelineDrawer: View {
     @State private var showReorderSheet = false
     @State private var dayToDelete: TripDay?
     @State private var showDeleteDayAlert = false
+    @State private var showEditOutfitSheet = false
 
     private var isOverviewMode: Bool {
         selectedDayIndex == 0
@@ -235,6 +236,9 @@ struct TripDayTimelineDrawer: View {
         } message: { day in
             Text("确定从行程中移除 Day \(day.dayIndex) 吗？该天包含的 \(day.nodes.count) 个地点将被一并删除。")
         }
+        .sheet(isPresented: $showEditOutfitSheet) {
+            EditOutfitAdviceSheet(trip: trip, day: isOverviewMode ? nil : currentDay)
+        }
     }
 
     // MARK: - 抽屉头部交互区
@@ -314,6 +318,25 @@ struct TripDayTimelineDrawer: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                // 穿衣指南/穿搭建议按键
+                Button {
+                    HapticFeedback.light()
+                    showEditOutfitSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "tshirt.fill")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("穿搭")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(AppTheme.sageMint.opacity(0.12))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
 
                 // 加节点操作按钮
                 Button {
@@ -549,6 +572,12 @@ struct TripDayTimelineDrawer: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 8) {
+                    // 当日穿衣搭配指南卡片
+                    OutfitAdviceCardView(trip: trip, day: currentDay) {
+                        showEditOutfitSheet = true
+                    }
+                    .padding(.bottom, 2)
+
                     // 前日承接提示 (当非第一天时展示)
                     if selectedDayIndex > 1, let prevDay = trip.days.first(where: { $0.dayIndex == selectedDayIndex - 1 }) {
                         previousDayTransitionHint(prevDay: prevDay)
@@ -649,6 +678,12 @@ struct TripDayTimelineDrawer: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 12) {
+                    // 全程穿衣搭配指南卡片
+                    OutfitAdviceCardView(trip: trip, day: nil) {
+                        showEditOutfitSheet = true
+                    }
+                    .padding(.bottom, 2)
+
                     ForEach(Array(sortedDays.enumerated()), id: \.element.id) { dayIndex, day in
                         // 1. 各天头部卡片 (含 "只看这天" 快捷按键)
                         dayOverviewHeader(day: day)
@@ -1106,6 +1141,12 @@ struct TripDayTimelineDrawer: View {
     // MARK: - 空状态
     private var emptyDayView: some View {
         VStack(spacing: 16) {
+            OutfitAdviceCardView(trip: trip, day: isOverviewMode ? nil : currentDay) {
+                showEditOutfitSheet = true
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+
             Spacer()
             ZStack {
                 Circle()

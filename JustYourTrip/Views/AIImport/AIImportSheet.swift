@@ -75,7 +75,7 @@ enum AISubStep: Int, CaseIterable, Identifiable, Hashable {
         case .cleanContent: return "净化文案与去除冗余"
         case .connectModel: return "连接大模型分析上下文"
         case .extractStructure: return "多模态提取每日路线与换乘"
-        case .extractChecklist: return "生成游玩建议与行前清单"
+        case .extractChecklist: return "生成穿衣推荐、避坑建议与行前清单"
         case .cityAnchor: return "锁定城市空间基准锚点"
         case .resolvePOI: return "高精反查与校准站点坐标"
         case .topologyOptimization: return "空间拓扑防重叠与优化"
@@ -114,6 +114,7 @@ struct AIImportSheet: View {
     @State private var parsedTripTitle: String = ""
     @State private var parsedDestination: String = ""
     @State private var parsedChecklist: [String] = []
+    @State private var parsedOutfitAdvice: String = ""
     @State private var navigateToCalibration: Bool = false
     @State private var showSettings: Bool = false
 
@@ -188,6 +189,7 @@ struct AIImportSheet: View {
                     destination: parsedDestination,
                     days: parsedDraftDays,
                     suggestedChecklist: parsedChecklist,
+                    outfitAdvice: parsedOutfitAdvice,
                     onSaved: {
                         dismiss()
                     }
@@ -689,6 +691,7 @@ struct AIImportSheet: View {
         1. 早上轮渡过黄浦江至陆家嘴站C口出，打卡东方明珠脚下三件套。
         2. 随后打车前往浦东美术馆看展，顶楼露台拍照极佳。
 
+        【穿衣穿搭推荐】: 春秋季早晚温差大，建议长袖打底配风衣或开衫；梧桐区出片适合浅色系或复古法式穿搭，江边夜景观光风大备一件防风外套；全程徒步较多，务必穿舒适平底健步鞋。
         特需打包清单：充电宝、轻便步行鞋、晴雨伞。
         """
     }
@@ -919,7 +922,7 @@ struct AIImportSheet: View {
                         )
                         draftNodes.append(draftNode)
                     }
-                    draftDays.append(DraftDay(dayIndex: dayDTO.dayIndex, summary: dayDTO.summary, nodes: draftNodes))
+                    draftDays.append(DraftDay(dayIndex: dayDTO.dayIndex, summary: dayDTO.summary, outfitAdvice: dayDTO.outfitAdvice ?? "", nodes: draftNodes))
                 }
 
                 await MainActor.run {
@@ -946,6 +949,7 @@ struct AIImportSheet: View {
                     self.parsedDestination = dto.destination
                     self.parsedDraftDays = draftDays
                     self.parsedChecklist = dto.suggestedChecklist ?? []
+                    self.parsedOutfitAdvice = dto.outfitAdvice ?? ""
                     self.isProcessing = false
                     self.navigateToCalibration = true
                 }

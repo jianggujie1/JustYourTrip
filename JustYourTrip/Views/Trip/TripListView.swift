@@ -409,6 +409,21 @@ struct TripCardView: View {
                     .padding(.bottom, 12)
             }
             
+            // 穿衣指南精选摘要 (若存在)
+            if !trip.outfitAdvice.isEmpty {
+                HStack(spacing: 5) {
+                    Image(systemName: "tshirt.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.sageMint)
+                    Text(trip.outfitAdvice)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 10)
+            }
+            
             Divider()
                 .opacity(0.4)
                 .padding(.horizontal, 18)

@@ -16,12 +16,18 @@ struct MockData {
             startDate: today,
             endDate: dayAfter,
             notes: "包含经典陆家嘴天际线、外滩历史建筑群、法租界梧桐区漫步与特色轮渡换乘体验。",
-            vibeTags: ["🏙️ 梧桐Citywalk", "📸 地标天际线", "⛴️ 过江轮渡", "☕ 慢调漫游"]
+            vibeTags: ["🏙️ 梧桐Citywalk", "📸 地标天际线", "⛴️ 过江轮渡", "☕ 慢调漫游"],
+            outfitAdvice: "春秋季早晚温差大，建议洋葱式叠穿：长袖T恤搭配风衣或针织开衫；外滩与梧桐区步行距离长，务必穿舒适平底鞋/健步鞋；拍照建议米白、大地色等浅色系，出片效果更佳。"
         )
         context.insert(trip)
         
         // Day 1
-        let day1 = TripDay(dayIndex: 1, date: today, summary: "从人民广场到陆家嘴核心地标群，体验过江交通")
+        let day1 = TripDay(
+            dayIndex: 1,
+            date: today,
+            summary: "从人民广场到陆家嘴核心地标群，体验过江交通",
+            outfitAdvice: "全天江边与地标游览，江风较大，建议备一件轻薄防风外套；随身携带晴雨两用伞与充电宝。"
+        )
         day1.trip = trip
         context.insert(day1)
         
@@ -86,7 +92,12 @@ struct MockData {
         context.insert(d1n4)
         
         // Day 2
-        let day2 = TripDay(dayIndex: 2, date: tomorrow, summary: "武康路与安福路梧桐区Citywalk，探访历史洋房")
+        let day2 = TripDay(
+            dayIndex: 2,
+            date: tomorrow,
+            summary: "武康路与安福路梧桐区Citywalk，探访历史洋房",
+            outfitAdvice: "梧桐区漫步与洋房探店，推荐复古法式或日系浅色系穿搭，拍照极具氛围感；适合轻便暴走运动鞋。"
+        )
         day2.trip = trip
         context.insert(day2)
         

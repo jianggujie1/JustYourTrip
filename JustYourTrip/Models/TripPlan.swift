@@ -12,6 +12,7 @@ final class TripPlan {
     var coverImageData: Data?
     var notes: String = ""
     var vibeTags: [String] = []
+    var outfitAdvice: String = "" // 穿衣指南 / 穿衣推荐
     var createdAt: Date = Date()
     
     // 关系：每日安排 (一对多，级联删除)
@@ -28,7 +29,8 @@ final class TripPlan {
         startDate: Date = Date(),
         endDate: Date = Date().addingTimeInterval(86400 * 2),
         notes: String = "",
-        vibeTags: [String] = []
+        vibeTags: [String] = [],
+        outfitAdvice: String = ""
     ) {
         self.id = UUID()
         self.title = title
@@ -37,6 +39,7 @@ final class TripPlan {
         self.endDate = endDate
         self.notes = notes
         self.vibeTags = vibeTags
+        self.outfitAdvice = outfitAdvice
         self.createdAt = Date()
     }
     

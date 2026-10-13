@@ -5,15 +5,17 @@ struct ParsedTripDTO: Codable {
     struct ParsedDayDTO: Codable {
         var dayIndex: Int
         var summary: String
+        var outfitAdvice: String?
         var nodes: [ParsedNodeDTO]
         
         enum CodingKeys: String, CodingKey {
-            case dayIndex, summary, nodes
+            case dayIndex, summary, outfitAdvice, nodes
         }
         
-        init(dayIndex: Int = 1, summary: String = "", nodes: [ParsedNodeDTO] = []) {
+        init(dayIndex: Int = 1, summary: String = "", outfitAdvice: String? = nil, nodes: [ParsedNodeDTO] = []) {
             self.dayIndex = dayIndex
             self.summary = summary
+            self.outfitAdvice = outfitAdvice
             self.nodes = nodes
         }
         
@@ -21,12 +23,14 @@ struct ParsedTripDTO: Codable {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.dayIndex = (try? container.decode(Int.self, forKey: .dayIndex)) ?? 1
             self.summary = (try? container.decode(String.self, forKey: .summary)) ?? ""
+            self.outfitAdvice = try? container.decodeIfPresent(String.self, forKey: .outfitAdvice)
             self.nodes = (try? container.decode([ParsedNodeDTO].self, forKey: .nodes)) ?? []
         }
         func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(dayIndex, forKey: .dayIndex)
             try container.encode(summary, forKey: .summary)
+            try container.encodeIfPresent(outfitAdvice, forKey: .outfitAdvice)
             try container.encode(nodes, forKey: .nodes)
         }
     }
@@ -118,11 +122,12 @@ struct ParsedTripDTO: Codable {
     
     var tripTitle: String
     var destination: String
+    var outfitAdvice: String?
     var days: [ParsedDayDTO]
     var suggestedChecklist: [String]?
     
     enum CodingKeys: String, CodingKey {
-        case tripTitle, destination, days, suggestedChecklist, title
+        case tripTitle, destination, outfitAdvice, days, suggestedChecklist, title
     }
     
     init(from decoder: Decoder) throws {
@@ -135,6 +140,7 @@ struct ParsedTripDTO: Codable {
             self.tripTitle = "定制旅行路线"
         }
         self.destination = (try? container.decode(String.self, forKey: .destination)) ?? "旅行目的地"
+        self.outfitAdvice = try? container.decodeIfPresent(String.self, forKey: .outfitAdvice)
         self.days = (try? container.decode([ParsedDayDTO].self, forKey: .days)) ?? []
         self.suggestedChecklist = try? container.decodeIfPresent([String].self, forKey: .suggestedChecklist)
     }
@@ -143,6 +149,7 @@ struct ParsedTripDTO: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(tripTitle, forKey: .tripTitle)
         try container.encode(destination, forKey: .destination)
+        try container.encodeIfPresent(outfitAdvice, forKey: .outfitAdvice)
         try container.encode(days, forKey: .days)
         try container.encodeIfPresent(suggestedChecklist, forKey: .suggestedChecklist)
     }
@@ -183,10 +190,12 @@ final class LLMParserService: Sendable {
         {
           "tripTitle": "行程名称",
           "destination": "目的地或路线主题（如：上海、北京、成都、东京、呼伦贝尔大环线、川西自驾）",
+          "outfitAdvice": "整体穿衣指南与穿搭建议（核心规则：若攻略/游记笔记中提及了穿衣、穿搭、服装、鞋履、防寒防晒建议，务必直接忠实带入；若原文未提及，必须结合目的地气候、当前季节时令、行程游玩活动强度智能推荐，如外层防风防雨、内搭保暖透气、出片配色、轻便平底暴走鞋、晴雨伞/帽子等实用着装指导）",
           "days": [
             {
               "dayIndex": 1,
               "summary": "当日概览/主题",
+              "outfitAdvice": "当日专属穿衣搭配建议（可选，若该天有特殊场景如徒步爬山、江边观夜景、精致探店出片可单独给出建议）",
               "nodes": [
                 {
                   "title": "地点/站名/口名",
@@ -210,7 +219,8 @@ final class LLMParserService: Sendable {
         2. 节点间的换乘指示填写在 incomingGuide 中。
         3. searchKeyword 必须输出适合调用苹果地图/高德地图搜索的标准地名；如果行程跨越多个城市或为长途自驾，请附带该地所属具体市/县/旗名以避免跨省同名歧义。
         4. estimatedLatitude 和 estimatedLongitude 必须根据各节点的真实地理位置给出估算经纬度，严禁所有跨城节点填写同一城市坐标（例如北京节点须为北京经纬度约39.9, 116.4，满洲里节点须为满洲里经纬度约49.6, 117.4）。
-        5. 请直接输出符合上述规范的有效 JSON 文本。
+        5. outfitAdvice 穿衣推荐：若原文有穿搭/服装/鞋子说明请直接完整带入；若无，请结合目的地、季节和路线游玩强度贴心生成详细、实用的穿衣搭配指导。
+        6. 请直接输出符合上述规范的有效 JSON 文本。
         """
         
         var requestBody: [String: Any] = [

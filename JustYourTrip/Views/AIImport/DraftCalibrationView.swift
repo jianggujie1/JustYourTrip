@@ -56,11 +56,13 @@ final class DraftDay: Identifiable {
     let id = UUID()
     var dayIndex: Int
     var summary: String
+    var outfitAdvice: String
     var nodes: [DraftNode]
     
-    init(dayIndex: Int, summary: String = "", nodes: [DraftNode] = []) {
+    init(dayIndex: Int, summary: String = "", outfitAdvice: String = "", nodes: [DraftNode] = []) {
         self.dayIndex = dayIndex
         self.summary = summary
+        self.outfitAdvice = outfitAdvice
         self.nodes = nodes
     }
 }
@@ -74,9 +76,12 @@ struct DraftCalibrationView: View {
     var destination: String
     var days: [DraftDay]
     var suggestedChecklist: [String]
+    var outfitAdvice: String
     var onSaved: () -> Void
     
     @State private var editableTitle: String = ""
+    @State private var editableOutfitAdvice: String = ""
+    @State private var showEditOutfitSheet: Bool = false
     @State private var selectedDayIndex: Int = 1
     @State private var selectedNodeId: UUID?
     @State private var mapCameraPosition: MapCameraPosition = .automatic
@@ -88,14 +93,17 @@ struct DraftCalibrationView: View {
         destination: String,
         days: [DraftDay],
         suggestedChecklist: [String] = [],
+        outfitAdvice: String = "",
         onSaved: @escaping () -> Void
     ) {
         self.tripTitle = tripTitle
         self.destination = destination
         self.days = days
         self.suggestedChecklist = suggestedChecklist
+        self.outfitAdvice = outfitAdvice
         self.onSaved = onSaved
         _editableTitle = State(initialValue: tripTitle)
+        _editableOutfitAdvice = State(initialValue: outfitAdvice)
     }
 
     private var currentDay: DraftDay? {
@@ -150,6 +158,9 @@ struct DraftCalibrationView: View {
             }
             .sheet(item: $pickingLocationNode) { node in
                 MapLocationPickerSheet(node: node, destination: destination)
+            }
+            .sheet(isPresented: $showEditOutfitSheet) {
+                EditDraftOutfitSheet(outfitAdvice: $editableOutfitAdvice, destination: destination)
             }
         }
     }
@@ -369,6 +380,85 @@ struct DraftCalibrationView: View {
                 }
             }
             
+            // AI 出行穿衣推荐与穿搭建议
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "tshirt.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(AppTheme.sageMint)
+                        Text("AI 出行穿衣推荐与穿搭指南")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Button {
+                            HapticFeedback.light()
+                            showEditOutfitSheet = true
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "pencil")
+                                Text(editableOutfitAdvice.isEmpty ? "添加" : "自定义编辑")
+                            }
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.forestPrimary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.forestPrimary.opacity(0.08))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    Divider().opacity(0.5)
+                    
+                    if editableOutfitAdvice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button {
+                            HapticFeedback.light()
+                            showEditOutfitSheet = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle.dashed")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                                Text("点击补充针对该路线的穿衣搭配、鞋履舒适度与防风防晒建议...")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Text(editableOutfitAdvice)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.primary.opacity(0.88))
+                            .lineSpacing(3)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                HapticFeedback.light()
+                                showEditOutfitSheet = true
+                            }
+                    }
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(AppTheme.sageMint.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(AppTheme.sageMint.opacity(0.2), lineWidth: 1)
+                )
+                .listRowInsets(EdgeInsets(top: 10, leading: 14, bottom: 5, trailing: 14))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            } header: {
+                Text("出行穿搭指导")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 2)
+            }
+            
             // 行前准备推荐 (若有)
             if !suggestedChecklist.isEmpty {
                 Section {
@@ -491,13 +581,14 @@ struct DraftCalibrationView: View {
             destination: destination,
             startDate: today,
             endDate: endDate,
-            vibeTags: ["✨ AI定制路线", "🗺️ 漫游规划"]
+            vibeTags: ["✨ AI定制路线", "🗺️ 漫游规划"],
+            outfitAdvice: editableOutfitAdvice
         )
         modelContext.insert(plan)
         
         for draftDay in days {
             let targetDate = calendar.date(byAdding: .day, value: draftDay.dayIndex - 1, to: today) ?? today
-            let day = TripDay(dayIndex: draftDay.dayIndex, date: targetDate, summary: draftDay.summary)
+            let day = TripDay(dayIndex: draftDay.dayIndex, date: targetDate, summary: draftDay.summary, outfitAdvice: draftDay.outfitAdvice)
             day.trip = plan
             modelContext.insert(day)
             
@@ -1013,3 +1104,110 @@ struct EditDraftNodeSheet: View {
         searchResults = []
     }
 }
+
+// MARK: - 编辑草稿穿衣推荐弹窗 (EditDraftOutfitSheet)
+struct EditDraftOutfitSheet: View {
+    @Binding var outfitAdvice: String
+    var destination: String
+    @Environment(\.dismiss) private var dismiss
+    @State private var localText: String = ""
+
+    private let quickTags = [
+        "🧥 早晚温差备外套",
+        "👟 轻便平底暴走鞋",
+        "📸 浅色系拍照出片",
+        "🌬️ 江边防风保暖",
+        "☀️ 防晒透气速干",
+        "☔ 备晴雨两用伞",
+        "👗 氛围感法式复古",
+        "🧣 昼夜温差洋葱穿法"
+    ]
+
+    init(outfitAdvice: Binding<String>, destination: String) {
+        self._outfitAdvice = outfitAdvice
+        self.destination = destination
+        self._localText = State(initialValue: outfitAdvice.wrappedValue)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $localText)
+                        .frame(minHeight: 120)
+
+                    if !localText.isEmpty {
+                        HStack {
+                            Spacer()
+                            Button("清空") {
+                                localText = ""
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("穿衣搭配建议与气候防范")
+                }
+
+                Section("快捷添加标签灵感") {
+                    FlowLayout(spacing: 8) {
+                        ForEach(quickTags, id: \.self) { tag in
+                            Button {
+                                HapticFeedback.light()
+                                if localText.isEmpty {
+                                    localText = tag
+                                } else if !localText.contains(tag) {
+                                    localText += "；" + tag
+                                }
+                            } label: {
+                                Text(tag)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.primary.opacity(0.06))
+                                    .foregroundStyle(Color.primary)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Button {
+                        HapticFeedback.light()
+                        let city = destination.isEmpty ? "目的地" : destination
+                        localText = "\(city)出行穿搭建议：早晚温差较大，推荐洋葱式分层穿法（长袖打底配轻薄风衣/针织开衫）；全天探索步行多，请务必穿轻便舒适的平底健步鞋；拍照推荐浅色系或大地色系，出片效果好；随身备晴雨两用伞与防晒用品。"
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(AppTheme.warmAmber)
+                            Text("生成「\(destination.isEmpty ? "目的地" : destination)」智能穿衣模版")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(AppTheme.forestPrimary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("编辑穿衣推荐")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") {
+                        HapticFeedback.success()
+                        outfitAdvice = localText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        dismiss()
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(AppTheme.forestPrimary)
+                }
+            }
+        }
+    }
+}
+

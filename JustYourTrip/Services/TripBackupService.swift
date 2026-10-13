@@ -17,6 +17,7 @@ struct TripPlanDTO: Codable {
     let endDate: Date
     let notes: String
     let vibeTags: [String]
+    var outfitAdvice: String? = ""
     let days: [TripDayDTO]
     let checklistItems: [ChecklistItemDTO]
 }
@@ -25,6 +26,7 @@ struct TripDayDTO: Codable {
     let dayIndex: Int
     let date: Date
     let summary: String
+    var outfitAdvice: String? = ""
     let nodes: [RouteNodeDTO]
 }
 
@@ -82,6 +84,7 @@ final class TripBackupService {
                     dayIndex: day.dayIndex,
                     date: day.date,
                     summary: day.summary,
+                    outfitAdvice: day.outfitAdvice,
                     nodes: nodeDTOs
                 )
             }
@@ -103,6 +106,7 @@ final class TripBackupService {
                 endDate: trip.endDate,
                 notes: trip.notes,
                 vibeTags: trip.vibeTags,
+                outfitAdvice: trip.outfitAdvice,
                 days: dayDTOs,
                 checklistItems: checklistDTOs
             )
@@ -156,12 +160,18 @@ final class TripBackupService {
                 startDate: tripDTO.startDate,
                 endDate: tripDTO.endDate,
                 notes: tripDTO.notes,
-                vibeTags: tripDTO.vibeTags
+                vibeTags: tripDTO.vibeTags,
+                outfitAdvice: tripDTO.outfitAdvice ?? ""
             )
             context.insert(trip)
             
             for dayDTO in tripDTO.days {
-                let day = TripDay(dayIndex: dayDTO.dayIndex, date: dayDTO.date, summary: dayDTO.summary)
+                let day = TripDay(
+                    dayIndex: dayDTO.dayIndex,
+                    date: dayDTO.date,
+                    summary: dayDTO.summary,
+                    outfitAdvice: dayDTO.outfitAdvice ?? ""
+                )
                 day.trip = trip
                 context.insert(day)
                 
