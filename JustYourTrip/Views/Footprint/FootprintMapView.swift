@@ -28,8 +28,9 @@ struct FootprintMapView: View {
     @Query(filter: #Predicate<RouteNode> { $0.isVisited }, sort: \RouteNode.visitedAt, order: .reverse)
     private var visitedNodes: [RouteNode]
     
+    @Namespace private var mapScope
     @State private var selectedCategory: FootprintCategoryFilter = .all
-    @State private var hideTransit: Bool = true
+    @State private var hideTransit: Bool = SettingsManager.shared.filterTransitInFootprint
     @State private var selectedNode: RouteNode?
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var showNavigationDialog: Bool = false
@@ -64,7 +65,7 @@ struct FootprintMapView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 // 1. MapKit 足迹底板
-                Map(position: $cameraPosition) {
+                Map(position: $cameraPosition, scope: mapScope) {
                     ForEach(displayedNodes) { node in
                         Annotation(node.title, coordinate: node.coordinate) {
                             markerView(for: node)
@@ -86,8 +87,6 @@ struct FootprintMapView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .mapControls {
-                    MapCompass()
-                    MapUserLocationButton()
                     MapScaleView()
                 }
                 
@@ -101,8 +100,48 @@ struct FootprintMapView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
+
+                // 3. 右侧悬浮地图控制岛 (指南针、定位、足迹全览；独立布局彻底避免与右上角按钮重叠)
+                VStack {
+                    Spacer()
+                        .frame(height: 122)
+
+                    HStack {
+                        Spacer()
+
+                        VStack(spacing: 10) {
+                            MapCompass(scope: mapScope)
+                                .mapControlVisibility(.visible)
+
+                            MapUserLocationButton(scope: mapScope)
+                                .mapControlVisibility(.visible)
+
+                            // 全览所有足迹按钮
+                            Button {
+                                HapticFeedback.light()
+                                focusAllFootprints()
+                            } label: {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 44, height: 44)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+                                    )
+                                    .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 2)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.trailing, 16)
+                    }
+
+                    Spacer()
+                }
                 
-                // 3. 底部选中的回忆明信片卡片
+                // 4. 底部选中的回忆明信片卡片
                 if let selected = selectedNode {
                     FootprintCardView(
                         node: selected,
@@ -119,7 +158,7 @@ struct FootprintMapView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
-                // 4. 空足迹状态引导浮层
+                // 5. 空足迹状态引导浮层
                 if visitedNodes.isEmpty {
                     emptyFootprintOverlay
                         .padding(.horizontal, 24)
@@ -128,6 +167,12 @@ struct FootprintMapView: View {
             }
             .navigationTitle("全局足迹大地图")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                focusAllFootprints()
+            }
+            .onChange(of: hideTransit) { _, newValue in
+                SettingsManager.shared.filterTransitInFootprint = newValue
+            }
             .confirmationDialog(
                 "请选择导航应用",
                 isPresented: $showNavigationDialog,
@@ -167,8 +212,8 @@ struct FootprintMapView: View {
             if isSelected {
                 Circle()
                     .fill(color.opacity(0.25))
-                    .frame(width: 52, height: 52)
-                    .blur(radius: 4)
+                    .frame(width: 50, height: 50)
+                    .blur(radius: 3)
             }
             
             Circle()
@@ -179,19 +224,19 @@ struct FootprintMapView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: isSelected ? 40 : 30, height: isSelected ? 40 : 30)
+                .frame(width: isSelected ? 38 : 28, height: isSelected ? 38 : 28)
                 .overlay(
                     Circle()
-                        .stroke(Color.white, lineWidth: isSelected ? 2.5 : 2)
+                        .stroke(Color.white, lineWidth: isSelected ? 2.5 : 1.8)
                 )
-                .shadow(color: color.opacity(isSelected ? 0.45 : 0.25), radius: isSelected ? 8 : 4, x: 0, y: 2)
+                .shadow(color: isSelected ? color.opacity(0.4) : Color.black.opacity(0.1), radius: isSelected ? 6 : 2, x: 0, y: isSelected ? 2 : 1)
             
             Image(systemName: node.nodeType.systemIcon)
-                .font(.system(size: isSelected ? 16 : 12, weight: .bold))
+                .font(.system(size: isSelected ? 15 : 11, weight: .bold))
                 .foregroundStyle(.white)
         }
         .scaleEffect(isSelected ? 1.15 : 1.0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
+        .compositingGroup()
     }
     
     private func markerColor(for node: RouteNode) -> Color {
@@ -335,5 +380,47 @@ struct FootprintMapView: View {
         }
         .padding(20)
         .glassCard(cornerRadius: 24)
+    }
+
+    // MARK: - 镜头全景居中
+
+    private func focusAllFootprints() {
+        guard !displayedNodes.isEmpty else { return }
+
+        if displayedNodes.count == 1, let single = displayedNodes.first {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                cameraPosition = .region(
+                    MKCoordinateRegion(
+                        center: single.coordinate,
+                        latitudinalMeters: 2000,
+                        longitudinalMeters: 2000
+                    )
+                )
+            }
+            return
+        }
+
+        let lats = displayedNodes.map { $0.latitude }
+        let lons = displayedNodes.map { $0.longitude }
+        let minLat = lats.min() ?? 0
+        let maxLat = lats.max() ?? 0
+        let minLon = lons.min() ?? 0
+        let maxLon = lons.max() ?? 0
+
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+
+        let span = MKCoordinateSpan(
+            latitudeDelta: max((maxLat - minLat) * 1.5, 0.025),
+            longitudeDelta: max((maxLon - minLon) * 1.5, 0.025)
+        )
+
+        withAnimation(.easeInOut(duration: 0.6)) {
+            cameraPosition = .region(
+                MKCoordinateRegion(center: center, span: span)
+            )
+        }
     }
 }

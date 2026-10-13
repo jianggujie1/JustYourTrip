@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// 地图上的节点自定义图钉标记 (空间毛玻璃与发光徽章、序号标、微动效)
+/// 地图上的节点自定义图钉标记 (空间徽章、序号标、自适应紧凑模式与高性能图层栅格化)
 struct NodeMarkerView: View {
     let node: RouteNode
     var index: Int? = nil
     var indexText: String? = nil
     var dayColor: Color? = nil
     let isSelected: Bool
+    var showTitle: Bool = true
     
     var body: some View {
         VStack(spacing: 3) {
@@ -15,34 +16,34 @@ struct NodeMarkerView: View {
                 if isSelected {
                     Circle()
                         .fill(markerColor.opacity(0.25))
-                        .frame(width: 56, height: 56)
-                        .blur(radius: 5)
+                        .frame(width: 54, height: 54)
+                        .blur(radius: 4)
                     
                     Circle()
                         .stroke(markerColor.opacity(0.6), lineWidth: 1.5)
-                        .frame(width: 50, height: 50)
+                        .frame(width: 48, height: 48)
                 }
                 
                 // 图钉主圆盘 (带微渐变)
                 Circle()
                     .fill(markerGradient)
-                    .frame(width: isSelected ? 42 : 34, height: isSelected ? 42 : 34)
+                    .frame(width: isSelected ? 40 : 32, height: isSelected ? 40 : 32)
                     .overlay(
                         Circle()
                             .stroke(Color.white, lineWidth: isSelected ? 2.5 : 2)
                     )
-                    .shadow(color: markerColor.opacity(isSelected ? 0.45 : 0.25), radius: isSelected ? 8 : 4, x: 0, y: 3)
+                    .shadow(color: isSelected ? markerColor.opacity(0.4) : Color.black.opacity(0.12), radius: isSelected ? 6 : 2, x: 0, y: isSelected ? 2 : 1)
                 
                 // 内部类型图标
                 Image(systemName: node.nodeType.systemIcon)
-                    .font(.system(size: isSelected ? 16 : 13, weight: .bold))
+                    .font(.system(size: isSelected ? 15 : 12, weight: .bold))
                     .foregroundStyle(.white)
                 
                 // 左上角数字序号/天数标识角标
                 let badgeText = indexText ?? index.map { "\($0)" }
                 if let badge = badgeText {
                     Text(badge)
-                        .font(.system(size: badge.count > 2 ? 8 : 9, weight: .black, design: .rounded))
+                        .font(.system(size: badge.count > 2 ? 8 : 8.5, weight: .black, design: .rounded))
                         .foregroundStyle(isSelected ? (dayColor ?? markerColor) : Color.white)
                         .frame(minWidth: 16)
                         .frame(height: 16)
@@ -53,54 +54,56 @@ struct NodeMarkerView: View {
                             Capsule()
                                 .stroke(Color.white.opacity(0.85), lineWidth: 1)
                         )
-                        .offset(x: isSelected ? -14 : -12, y: isSelected ? -14 : -12)
+                        .offset(x: isSelected ? -13 : -11, y: isSelected ? -13 : -11)
                 }
                 
                 // 打卡成功右下角微角标
                 if node.isVisited {
                     Circle()
                         .fill(AppTheme.sageMint)
-                        .frame(width: 16, height: 16)
+                        .frame(width: 15, height: 15)
                         .overlay(
                             Image(systemName: "checkmark")
-                                .font(.system(size: 8, weight: .black))
+                                .font(.system(size: 7.5, weight: .black))
                                 .foregroundStyle(.white)
                         )
                         .overlay(
                             Circle()
-                                .stroke(Color.white, lineWidth: 1.5)
+                                .stroke(Color.white, lineWidth: 1.2)
                         )
-                        .offset(x: isSelected ? 14 : 12, y: isSelected ? 14 : 12)
+                        .offset(x: isSelected ? 13 : 11, y: isSelected ? 13 : 11)
                 }
             }
             
-            // 节点名称毛玻璃标签
-            HStack(spacing: 4) {
-                if isSelected {
-                    Circle()
-                        .fill(markerColor)
-                        .frame(width: 5, height: 5)
+            // 节点名称标签 (采用硬件加速单层混合，杜绝全景多节点 GPU 离屏模糊拖慢)
+            if showTitle {
+                HStack(spacing: 4) {
+                    if isSelected {
+                        Circle()
+                            .fill(markerColor)
+                            .frame(width: 5, height: 5)
+                    }
+                    
+                    Text(node.title)
+                        .font(.system(size: isSelected ? 12 : 11, weight: isSelected ? .bold : .medium, design: .rounded))
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .lineLimit(1)
                 }
-                
-                Text(node.title)
-                    .font(.system(size: isSelected ? 12 : 11, weight: isSelected ? .bold : .medium, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                    .lineLimit(1)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule()
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground).opacity(isSelected ? 0.96 : 0.90))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? markerColor.opacity(0.6) : Color.white.opacity(0.35), lineWidth: isSelected ? 1.2 : 0.8)
+                )
+                .shadow(color: Color.black.opacity(isSelected ? 0.12 : 0.04), radius: isSelected ? 3 : 1.5, x: 0, y: 1)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3.5)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                Capsule()
-                    .stroke(isSelected ? markerColor.opacity(0.6) : Color.white.opacity(0.35), lineWidth: isSelected ? 1.2 : 0.8)
-            )
-            .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 1)
         }
         .scaleEffect(isSelected ? 1.15 : 1.0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isSelected)
+        .compositingGroup()
     }
     
     private var markerGradient: LinearGradient {

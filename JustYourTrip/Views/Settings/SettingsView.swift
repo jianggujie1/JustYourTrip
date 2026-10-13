@@ -197,9 +197,21 @@ struct SettingsView: View {
             VStack(spacing: 12) {
                 // API Key 输入
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("API Key (密钥)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("API Key (密钥)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 3) {
+                            Image(systemName: "lock.shield.fill")
+                                .font(.system(size: 10))
+                            Text("Keychain 硬件加密")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundStyle(AppTheme.sageMint)
+                    }
                     
                     HStack(spacing: 8) {
                         if isKeyVisible {
