@@ -71,6 +71,7 @@ final class DraftDay: Identifiable {
 struct DraftCalibrationView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     var tripTitle: String
     var destination: String
@@ -78,6 +79,10 @@ struct DraftCalibrationView: View {
     var suggestedChecklist: [String]
     var outfitAdvice: String
     var onSaved: () -> Void
+    
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
     
     @State private var editableTitle: String = ""
     @State private var editableOutfitAdvice: String = ""
@@ -116,14 +121,34 @@ struct DraftCalibrationView: View {
                 // MARK: - 顶部可编辑行程概要条
                 tripSummaryBanner
                 
-                // MARK: - 上半部分：全景动态小地图 (路线连线 + 序号 Pin + 悬浮控制器)
-                mapPreviewSection
-                
-                // MARK: - 天数快速切换胶囊条
-                daySelectorBar
-                
-                // MARK: - 下半部分：节点卡片调序列表与行前准备
-                draftNodesListSection
+                if isRegularWidth {
+                    // iPad 宽屏双栏工作站
+                    HStack(spacing: 0) {
+                        // 左栏：天数切换与可调序草稿列表
+                        VStack(spacing: 0) {
+                            daySelectorBar
+                            draftNodesListSection
+                        }
+                        .frame(width: 440)
+                        
+                        Divider()
+                            .opacity(0.5)
+                        
+                        // 右栏：高精全景路线大地图
+                        mapPreviewSection
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                } else {
+                    // iPhone 纵向流
+                    // MARK: - 上半部分：全景动态小地图 (路线连线 + 序号 Pin + 悬浮控制器)
+                    mapPreviewSection
+                    
+                    // MARK: - 天数快速切换胶囊条
+                    daySelectorBar
+                    
+                    // MARK: - 下半部分：节点卡片调序列表与行前准备
+                    draftNodesListSection
+                }
             }
             .background(AppTheme.canvasBackground.ignoresSafeArea())
             .navigationTitle("路线草稿校准")
@@ -225,7 +250,8 @@ struct DraftCalibrationView: View {
                     }
                 }
             }
-            .frame(height: 220)
+            .frame(height: isRegularWidth ? nil : 220)
+            .frame(maxHeight: isRegularWidth ? .infinity : nil)
             
             // 右下角全览居中悬浮按钮
             Button {
@@ -249,6 +275,7 @@ struct DraftCalibrationView: View {
                 .shadow(color: Color.black.opacity(0.12), radius: 5, x: 0, y: 2)
             }
             .buttonStyle(.plain)
+            .ipadHoverEffect()
             .padding(12)
         }
     }

@@ -191,6 +191,19 @@ extension View {
             self
         }
     }
+    
+    @ViewBuilder
+    func ipadHoverEffect(_ effect: HoverEffect = .lift) -> some View {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            self.hoverEffect(effect)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
 }
 
 // MARK: - 解决自定义导航返回按钮后边缘侧滑返回手势失效的问题

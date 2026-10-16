@@ -4,12 +4,17 @@ import SwiftData
 /// 行程列表首页 (Uix Foysal 概念画册风、多层堆叠卡片与自然森林色系)
 struct TripListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(sort: \TripPlan.startDate, order: .reverse) private var trips: [TripPlan]
     
     @State private var showAddTripSheet = false
     @State private var showAIImportSheet = false
     @State private var showSettingsSheet = false
     @Namespace private var tripTransitionNamespace
+    
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
     
     var body: some View {
         NavigationStack {
@@ -26,28 +31,51 @@ struct TripListView: View {
                         if trips.isEmpty {
                             emptyStateView
                         } else {
-                            // 优雅自适应行程卡片流 (去除假叠层，间距 18)
-                            LazyVStack(spacing: 18) {
-                                ForEach(trips) { trip in
-                                    NavigationLink(value: trip.id) {
-                                        TripCardView(trip: trip)
-                                    }
-                                    .buttonStyle(BouncyButtonStyle())
-                                    .tripZoomTransitionSource(id: trip.id, in: tripTransitionNamespace)
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            HapticFeedback.warning()
-                                            modelContext.delete(trip)
-                                        } label: {
-                                            Label("删除行程", systemImage: "trash")
+                            if isRegularWidth {
+                                // iPad 宽屏多列自适应画册瀑布流
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 360, maximum: 540), spacing: 20)], spacing: 20) {
+                                    ForEach(trips) { trip in
+                                        NavigationLink(value: trip.id) {
+                                            TripCardView(trip: trip)
+                                        }
+                                        .buttonStyle(BouncyButtonStyle())
+                                        .ipadHoverEffect(.lift)
+                                        .tripZoomTransitionSource(id: trip.id, in: tripTransitionNamespace)
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                HapticFeedback.warning()
+                                                modelContext.delete(trip)
+                                            } label: {
+                                                Label("删除行程", systemImage: "trash")
+                                            }
                                         }
                                     }
                                 }
+                                .padding(.top, 4)
+                            } else {
+                                // iPhone 纯粹单列流
+                                LazyVStack(spacing: 18) {
+                                    ForEach(trips) { trip in
+                                        NavigationLink(value: trip.id) {
+                                            TripCardView(trip: trip)
+                                        }
+                                        .buttonStyle(BouncyButtonStyle())
+                                        .tripZoomTransitionSource(id: trip.id, in: tripTransitionNamespace)
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                HapticFeedback.warning()
+                                                modelContext.delete(trip)
+                                            } label: {
+                                                Label("删除行程", systemImage: "trash")
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.top, 4)
                             }
-                            .padding(.top, 4)
                         }
                     }
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, isRegularWidth ? 24 : 18)
                     .padding(.top, 6)
                     .padding(.bottom, 40)
                 }

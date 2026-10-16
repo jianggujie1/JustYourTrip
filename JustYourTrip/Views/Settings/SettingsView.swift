@@ -27,6 +27,7 @@ struct SettingsView: View {
     @State private var showFileImporter: Bool = false
     @State private var alertMessage: String = ""
     @State private var showAlert: Bool = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showResetMockConfirm: Bool = false
 
     var body: some View {
@@ -48,6 +49,8 @@ struct SettingsView: View {
                     // MARK: - 5. 关于与系统信息
                     aboutCard
                 }
+                .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }

@@ -9,12 +9,18 @@ struct TripDetailMapView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedDayIndex: Int = 1
     @State private var selectedNodeId: UUID?
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var drawerDetent: DrawerDetent = .collapsed
+    @State private var isInspectorVisible: Bool = true
     @State private var showAddNodeSheet = false
+
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
 
     // 地图连线视效偏好 (支持 UserDefaults 持久化)
     @AppStorage("map_use_curved_routes") private var useCurvedRoutes: Bool = true
@@ -266,7 +272,11 @@ struct TripDetailMapView: View {
                                                 selectedNodeId = nil
                                             } else {
                                                 selectedNodeId = node.id
-                                                drawerDetent = .medium
+                                                if isRegularWidth {
+                                                    isInspectorVisible = true
+                                                } else {
+                                                    drawerDetent = .medium
+                                                }
                                                 focusCamera(on: node.coordinate)
                                             }
                                         }
@@ -291,7 +301,11 @@ struct TripDetailMapView: View {
                                             selectedNodeId = nil
                                         } else {
                                             selectedNodeId = node.id
-                                            drawerDetent = .medium
+                                            if isRegularWidth {
+                                                isInspectorVisible = true
+                                            } else {
+                                                drawerDetent = .medium
+                                            }
                                             focusCamera(on: node.coordinate)
                                         }
                                     }
@@ -332,21 +346,57 @@ struct TripDetailMapView: View {
                 }
                 .ignoresSafeArea(.all, edges: .top)
 
-                // 3. 底部联动抽屉 (原生作为视图内子组件，与地图一体化进出转场)
-                TripDayTimelineDrawer(
-                    trip: trip,
-                    selectedDayIndex: $selectedDayIndex,
-                    selectedNodeId: $selectedNodeId,
-                    drawerDetent: $drawerDetent,
-                    screenHeight: screenHeight,
-                    bottomSafeArea: bottomSafeArea,
-                    onNodeSelected: { node in
-                        focusCamera(on: node.coordinate)
-                    },
-                    onAddNode: {
-                        showAddNodeSheet = true
+                // 3. 联动时光轴 (iPad 宽屏下呈左侧悬浮手账面板，iPhone / 窄屏下为底部抽屉)
+                if isRegularWidth {
+                    HStack(spacing: 0) {
+                        if isInspectorVisible {
+                            TripDayTimelineDrawer(
+                                trip: trip,
+                                selectedDayIndex: $selectedDayIndex,
+                                selectedNodeId: $selectedNodeId,
+                                drawerDetent: $drawerDetent,
+                                screenHeight: screenHeight,
+                                bottomSafeArea: bottomSafeArea,
+                                onNodeSelected: { node in
+                                    focusCamera(on: node.coordinate)
+                                },
+                                onAddNode: {
+                                    showAddNodeSheet = true
+                                },
+                                onTogglePanel: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                                        isInspectorVisible = false
+                                    }
+                                }
+                            )
+                            .padding(.leading, 18)
+                            .padding(.top, max(topSafeArea, 16) + 48)
+                            .padding(.bottom, max(bottomSafeArea, 16) + 12)
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .leading).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                )
+                            )
+                        }
+                        Spacer()
                     }
-                )
+                } else {
+                    TripDayTimelineDrawer(
+                        trip: trip,
+                        selectedDayIndex: $selectedDayIndex,
+                        selectedNodeId: $selectedNodeId,
+                        drawerDetent: $drawerDetent,
+                        screenHeight: screenHeight,
+                        bottomSafeArea: bottomSafeArea,
+                        onNodeSelected: { node in
+                            focusCamera(on: node.coordinate)
+                        },
+                        onAddNode: {
+                            showAddNodeSheet = true
+                        }
+                    )
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
@@ -383,6 +433,31 @@ struct TripDetailMapView: View {
                     .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
             }
             .buttonStyle(.plain)
+            .ipadHoverEffect()
+
+            // iPad 专属侧边手账面板展开/收起按钮
+            if isRegularWidth {
+                Button {
+                    HapticFeedback.light()
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                        isInspectorVisible.toggle()
+                    }
+                } label: {
+                    Image(systemName: isInspectorVisible ? "sidebar.leading" : "sidebar.left")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(isInspectorVisible ? AppTheme.sageMint : .primary)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+                .ipadHoverEffect()
+            }
 
             // 当前天数与路线标题胶囊
             HStack(spacing: 6) {

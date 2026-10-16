@@ -51,11 +51,17 @@ struct TripDayTimelineDrawer: View {
     var bottomSafeArea: CGFloat
     var onNodeSelected: (RouteNode) -> Void
     var onAddNode: () -> Void
+    var onTogglePanel: (() -> Void)? = nil
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.modelContext) private var modelContext
     @State private var navigatingNode: RouteNode?
     @State private var showNavigationDialog = false
     @State private var dragOffset: CGFloat = 0
+
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
 
     @State private var nodeToDelete: RouteNode?
     @State private var showDeleteConfirmation = false
@@ -109,9 +115,11 @@ struct TripDayTimelineDrawer: View {
     private var dragGesture: some Gesture {
         DragGesture(minimumDistance: 5, coordinateSpace: .global)
             .onChanged { value in
+                guard !isRegularWidth else { return }
                 dragOffset = value.translation.height
             }
             .onEnded { value in
+                guard !isRegularWidth else { return }
                 let translation = value.translation.height
                 let velocity = value.predictedEndTranslation.height - value.translation.height
                 let projectedEndHeight = currentTargetHeight - (translation + velocity * 0.35)
@@ -147,8 +155,10 @@ struct TripDayTimelineDrawer: View {
                     .frame(maxHeight: .infinity)
             }
         }
-        .frame(height: displayedHeight)
-        .frame(maxWidth: .infinity)
+        .frame(width: isRegularWidth ? 410 : nil)
+        .frame(maxWidth: isRegularWidth ? nil : .infinity)
+        .frame(height: isRegularWidth ? nil : displayedHeight)
+        .frame(maxHeight: isRegularWidth ? .infinity : nil)
         .background(
             ZStack {
                 Rectangle()
@@ -158,13 +168,24 @@ struct TripDayTimelineDrawer: View {
             }
         )
         .clipShape(
-            RoundedCornerShape(radius: 26, corners: [.topLeft, .topRight])
+            RoundedCornerShape(
+                radius: isRegularWidth ? 24 : 26,
+                corners: isRegularWidth ? .allCorners : [.topLeft, .topRight]
+            )
         )
         .overlay(
-            RoundedCornerShape(radius: 26, corners: [.topLeft, .topRight])
-                .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
+            RoundedCornerShape(
+                radius: isRegularWidth ? 24 : 26,
+                corners: isRegularWidth ? .allCorners : [.topLeft, .topRight]
+            )
+            .stroke(AppTheme.cardGlassBorder, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.12), radius: 18, x: 0, y: -6)
+        .shadow(
+            color: Color.black.opacity(isRegularWidth ? 0.16 : 0.12),
+            radius: isRegularWidth ? 20 : 18,
+            x: isRegularWidth ? 4 : 0,
+            y: isRegularWidth ? 4 : -6
+        )
         .confirmationDialog(
             "请选择导航应用",
             isPresented: $showNavigationDialog,
@@ -244,26 +265,31 @@ struct TripDayTimelineDrawer: View {
     // MARK: - 抽屉头部交互区
     private var headerSection: some View {
         VStack(spacing: 0) {
-            // 1. 顶部小抓手
-            Capsule()
-                .fill(Color.primary.opacity(0.20))
-                .frame(width: 36, height: 5)
-                .padding(.top, 8)
-                .padding(.bottom, 6)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    HapticFeedback.light()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        switch drawerDetent {
-                        case .collapsed:
-                            drawerDetent = .medium
-                        case .medium:
-                            drawerDetent = .expanded
-                        case .expanded:
-                            drawerDetent = .collapsed
+            // 1. 顶部小抓手 (iPhone 上显示拖拽手势胶囊；iPad 上显示呼吸边距)
+            if !isRegularWidth {
+                Capsule()
+                    .fill(Color.primary.opacity(0.20))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        HapticFeedback.light()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            switch drawerDetent {
+                            case .collapsed:
+                                drawerDetent = .medium
+                            case .medium:
+                                drawerDetent = .expanded
+                            case .expanded:
+                                drawerDetent = .collapsed
+                            }
                         }
                     }
-                }
+            } else {
+                Spacer()
+                    .frame(height: 14)
+            }
 
             // 2. 行程标题与快捷操作栏
             HStack(alignment: .center) {
@@ -282,21 +308,37 @@ struct TripDayTimelineDrawer: View {
 
                 Spacer()
 
-                // 抽屉展开/收起辅助切换按键
-                Button {
-                    HapticFeedback.light()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                        drawerDetent = (drawerDetent == .collapsed) ? .medium : .collapsed
+                // 抽屉展开/收起辅助切换按键 (iPhone 抽屉；iPad 侧面板收起)
+                if !isRegularWidth {
+                    Button {
+                        HapticFeedback.light()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
+                            drawerDetent = (drawerDetent == .collapsed) ? .medium : .collapsed
+                        }
+                    } label: {
+                        Image(systemName: drawerDetent == .collapsed ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(Circle())
                     }
-                } label: {
-                    Image(systemName: drawerDetent == .collapsed ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(Circle())
+                    .buttonStyle(.plain)
+                } else if let onToggle = onTogglePanel {
+                    Button {
+                        HapticFeedback.light()
+                        onToggle()
+                    } label: {
+                        Image(systemName: "sidebar.leading")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(AppTheme.forestPrimary)
+                            .frame(width: 28, height: 28)
+                            .background(AppTheme.forestPrimary.opacity(0.08))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .ipadHoverEffect()
                 }
-                .buttonStyle(.plain)
 
                 // 调序操作按钮 (单日模式且多于1站时允许快捷调序)
                 if !isOverviewMode && sortedNodes.count > 1 {

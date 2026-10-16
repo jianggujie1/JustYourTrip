@@ -4,6 +4,7 @@ import SwiftData
 /// 行前准备（Checklist 打包助手 Tab - 仪式感进度环与手账折叠卡片）
 struct ChecklistTabView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(sort: \ChecklistItem.createdAt, order: .forward) private var allItems: [ChecklistItem]
     @Query(sort: \TripPlan.startDate, order: .reverse) private var trips: [TripPlan]
     
@@ -12,6 +13,10 @@ struct ChecklistTabView: View {
     @State private var showApplyTemplateAlert = false
     @State private var showResetAlert = false
     @State private var collapsedCategories: Set<String> = []
+    
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
     
     private var filteredItems: [ChecklistItem] {
         if let tripId = selectedTripId {
@@ -52,7 +57,8 @@ struct ChecklistTabView: View {
                 
                 // 2. 顶部打包仪式感仪表盘卡片
                 progressHeaderView
-                    .padding(.horizontal, 16)
+                    .frame(maxWidth: isRegularWidth ? 880 : .infinity)
+                    .padding(.horizontal, isRegularWidth ? 24 : 16)
                     .padding(.top, 12)
                     .padding(.bottom, 6)
                 
@@ -267,17 +273,32 @@ struct ChecklistTabView: View {
     
     private var categorizedItemsList: some View {
         ScrollView {
-            LazyVStack(spacing: 14) {
-                ForEach(ChecklistCategory.allCases, id: \.self) { category in
-                    let itemsInCategory = filteredItems.filter { $0.category == category }
-                    if !itemsInCategory.isEmpty {
-                        categoryCardView(category: category, items: itemsInCategory)
+            if isRegularWidth {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 16) {
+                    ForEach(ChecklistCategory.allCases, id: \.self) { category in
+                        let itemsInCategory = filteredItems.filter { $0.category == category }
+                        if !itemsInCategory.isEmpty {
+                            categoryCardView(category: category, items: itemsInCategory)
+                        }
                     }
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
+                .frame(maxWidth: 1000)
+            } else {
+                LazyVStack(spacing: 14) {
+                    ForEach(ChecklistCategory.allCases, id: \.self) { category in
+                        let itemsInCategory = filteredItems.filter { $0.category == category }
+                        if !itemsInCategory.isEmpty {
+                            categoryCardView(category: category, items: itemsInCategory)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 30)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-            .padding(.bottom, 30)
         }
     }
     

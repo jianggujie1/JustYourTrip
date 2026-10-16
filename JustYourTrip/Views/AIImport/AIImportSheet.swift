@@ -100,6 +100,7 @@ enum AISubStep: Int, CaseIterable, Identifiable, Hashable {
 /// 小红书/社媒攻略 AI 导入浮层 (端侧双引擎网页嗅探 + 3大阶段 9大细步友善进度展示)
 struct AIImportSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var inputText: String = ""
     @State private var isProcessing: Bool = false
@@ -155,11 +156,14 @@ struct AIImportSheet: View {
                             errorBanner(message: error)
                         }
                     }
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 680 : .infinity)
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                 }
 
                 // 底部开始/中断解析按钮
                 actionButton
+                    .frame(maxWidth: horizontalSizeClass == .regular ? 680 : .infinity)
             }
             .navigationTitle("AI 攻略导入")
             .navigationBarTitleDisplayMode(.inline)

@@ -25,6 +25,7 @@ enum FootprintCategoryFilter: String, CaseIterable, Identifiable, Hashable {
 
 /// 全局足迹大地图 (成就与回忆 Tab - 探索勋章与悬浮空间感)
 struct FootprintMapView: View {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(filter: #Predicate<RouteNode> { $0.isVisited }, sort: \RouteNode.visitedAt, order: .reverse)
     private var visitedNodes: [RouteNode]
     
@@ -34,6 +35,10 @@ struct FootprintMapView: View {
     @State private var selectedNode: RouteNode?
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var showNavigationDialog: Bool = false
+    
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
     
     private var displayedNodes: [RouteNode] {
         visitedNodes.filter { node in
@@ -93,8 +98,10 @@ struct FootprintMapView: View {
                 // 2. 顶部悬浮空间组件：漫游探索成就岛与分类筛选
                 VStack(spacing: 8) {
                     achievementHeaderIsland
+                        .frame(maxWidth: isRegularWidth ? 560 : .infinity)
                     
                     categoryFilterBar
+                        .frame(maxWidth: isRegularWidth ? 560 : .infinity)
                     
                     Spacer()
                 }
@@ -134,6 +141,7 @@ struct FootprintMapView: View {
                                     .shadow(color: Color.black.opacity(0.1), radius: 6, x: 0, y: 2)
                             }
                             .buttonStyle(.plain)
+                            .ipadHoverEffect()
                         }
                         .padding(.trailing, 16)
                     }
@@ -141,21 +149,47 @@ struct FootprintMapView: View {
                     Spacer()
                 }
                 
-                // 4. 底部选中的回忆明信片卡片
+                // 4. 底部/左下角选中的回忆明信片卡片
                 if let selected = selectedNode {
-                    FootprintCardView(
-                        node: selected,
-                        onClose: {
-                            withAnimation(.spring) {
-                                self.selectedNode = nil
-                            }
-                        },
-                        onNavigate: {
-                            showNavigationDialog = true
+                    HStack {
+                        if isRegularWidth {
+                            FootprintCardView(
+                                node: selected,
+                                onClose: {
+                                    withAnimation(.spring) {
+                                        self.selectedNode = nil
+                                    }
+                                },
+                                onNavigate: {
+                                    showNavigationDialog = true
+                                }
+                            )
+                            .frame(width: 420)
+                            .padding(.leading, 24)
+                            .padding(.bottom, 24)
+                            
+                            Spacer()
+                        } else {
+                            FootprintCardView(
+                                node: selected,
+                                onClose: {
+                                    withAnimation(.spring) {
+                                        self.selectedNode = nil
+                                    }
+                                },
+                                onNavigate: {
+                                    showNavigationDialog = true
+                                }
+                            )
+                            .padding(.bottom, 20)
                         }
+                    }
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: isRegularWidth ? .leading : .bottom).combined(with: .opacity),
+                            removal: .move(edge: isRegularWidth ? .leading : .bottom).combined(with: .opacity)
+                        )
                     )
-                    .padding(.bottom, 20)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
                 // 5. 空足迹状态引导浮层
